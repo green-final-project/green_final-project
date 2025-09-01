@@ -1,0 +1,46 @@
+# ============================================================
+# application.yml (공통 기본값)
+# - 목적: 공통 설정 + 기본 활성 프로필(dev) 지정
+# - 주의: DB 접속값은 여기에 두지 않음(환경별로 분리)
+# ============================================================
+
+# 접속 DB 계정 세팅
+spring:
+  # 프로필(dev/prod) 분리를 해야 함으로 주석 처리
+  #datasource:
+  #  driver-class-name: oracle.jdbc.OracleDriver   # 오라클 드라이버 클래스
+  #  url: jdbc:oracle:thin:@localhost:1521:xe      # 서비스 환경
+  #  username: gym                                 # 계정 아이디
+  #  password: 1234                                # 계정 비밀번호
+
+  profiles:
+    active: dev     # 기본 활성 프로필: dev (개발환경)
+    # active: prod  # 기본 활성 프로필: prod (운영환경)
+    
+# DB 정보 전달 MyBatis 세팅
+mybatis:
+  # 매퍼 XML 폴더 (모든 하위 폴더까지 스캔 → reservation/*.xml 등도 자동 인식)
+  mapper-locations: classpath*:mappers/**/*.xml 
+  
+  # DTO/도메인 클래스 별칭 경로 (예: com.gym.domain.Member → member 로 사용)
+  type-aliases-package: com.gym.domain            
+
+  configuration:
+    # 스네이크 케이스 컬럼명 → 카멜케이스 필드명 자동 매핑
+    map-underscore-to-camel-case: true
+    
+    # 콘솔에 SQL 출력
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+
+
+# 로그 레벨 세팅
+logging:
+  level:
+    com.gym: info                   # 프로젝트 코드 로그 레벨
+    org.mybatis: debug              # MyBatis 프레임워크 로그
+    org.apache.ibatis: debug        # (환경에 따라) SQL 파라미터 로그
+
+# 서버 포트 세팅
+server:
+  port: 8080                        # 포트 번호

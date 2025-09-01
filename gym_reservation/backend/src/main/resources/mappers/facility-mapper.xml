@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- ==========================================================
+ 시설 목록 XML 매퍼
+ - 카테고리 필터 복구: facility_category 컬럼 기준
+ - 사용여부: 'Y'/'N' 값으로 비교
+ - 500 회피: 스키마 불확실 컬럼(금액/시간 포맷 등) 호출 최소화
+========================================================== -->
+
+<!-- facility_tbl 조회 (DDL 준수: facility_type/ facility_use=Y|N) -->
+<mapper namespace="com.gym.mapper.xml.FacilityQueryMapper">
+
+  <select id="searchFacilities" resultType="com.gym.domain.facility.Facility">
+    SELECT
+      f.facility_id    AS facilityId,        -- PK
+      f.facility_name  AS facilityName,      -- 시설명
+      f.facility_type  AS facilityType,      -- ★ 카테고리(수영장/농구장/풋살장/배드민턴장/볼링장)
+      f.member_id      AS memberId,          -- 담당자ID
+      f.facility_use   AS facilityUse,       -- 사용여부(Y/N)
+      f.facility_money AS facilityMoney      -- 1시간 이용료
+      /* 필요시 아래 컬럼 주석 해제 (스키마와 정확히 일치할 때만)
+      , f.facility_phone       AS facilityPhone
+      , f.facility_content     AS facilityContent
+      , f.facility_image_path  AS facilityImagePath
+      , f.facility_person_max  AS facilityPersonMax
+      , f.facility_person_min  AS facilityPersonMin
+      , f.facility_reg_date    AS facilityRegDate
+      , f.facility_mod_date    AS facilityModDate
+      , f.facility_open_time   AS facilityOpenTime
+      , f.facility_close_time  AS facilityCloseTime
+      */
+    FROM facility_tbl f
+    <where>
+      <if test="name != null and name != ''">
+        AND f.facility_name LIKE '%' || #{name} || '%'
+      </if>
+      <if test="facilityType != null and facilityType != ''">
+        AND f.facility_type = #{facilityType}      <!-- ★ 컬럼명: facility_type (DDL 일치) -->
+      </if>
+      <if test="facilityUseYn != null and facilityUseYn != ''">
+        AND f.facility_use = #{facilityUseYn}      <!-- 'Y' 또는 'N' -->
+      </if>
+    </where>
+    ORDER BY f.facility_id
+  </select>
+
+</mapper>

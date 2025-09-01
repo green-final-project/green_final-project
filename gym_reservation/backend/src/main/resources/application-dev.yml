@@ -1,0 +1,12 @@
+# ============================================================
+# application-dev.yml (개발 환경 전용)
+# - 목적: 개발 PC의 오라클 접속 정보
+# - 주의: dev는 SID(:xe) 사용. 이 파일엔 DB 접속값만 둔다.
+# ============================================================
+
+spring:
+  datasource:
+    driver-class-name: oracle.jdbc.OracleDriver    # 오라클 드라이버
+    url: jdbc:oracle:thin:@localhost:1521:xe       # ✅ 개발 환경: SID(:xe)
+    username: gym                                  # 계정 아이디
+    password: 1234                                 # 계정 비밀번호
