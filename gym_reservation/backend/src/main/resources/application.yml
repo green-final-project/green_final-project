@@ -1,9 +1,3 @@
-# ============================================================
-# application.yml (공통 기본값)
-# - 목적: 공통 설정 + 기본 활성 프로필(dev) 지정
-# - 주의: DB 접속값은 여기에 두지 않음(환경별로 분리)
-# ============================================================
-
 # 접속 DB 계정 세팅
 spring:
   # 프로필(dev/prod) 분리를 해야 함으로 주석 처리
@@ -20,27 +14,47 @@ spring:
 # DB 정보 전달 MyBatis 세팅
 mybatis:
   # 매퍼 XML 폴더 (모든 하위 폴더까지 스캔 → reservation/*.xml 등도 자동 인식)
-  mapper-locations: classpath*:mappers/**/*.xml 
+  mapper-locations: 
+  - classpath*:/mappers/*.xml # ✅ 실제 폴더명과 일치(복수 mappers)
+  - classpath*:/mappers/**/*.xml  # ✅ 하위 폴더 포함
+  - classpath*:/com/gym/mapper/xml/*.xml  
   
   # DTO/도메인 클래스 별칭 경로 (예: com.gym.domain.Member → member 로 사용)
-  type-aliases-package: com.gym.domain            
+  type-aliases-package: com.gym.domain      
 
   configuration:
     # 스네이크 케이스 컬럼명 → 카멜케이스 필드명 자동 매핑
-    map-underscore-to-camel-case: true
-    
+    # map-underscore-to-camel-case: true # 이게 지금 적용이 안됨 [250923]
+    # -> myBatisConfig에 설정을 옮겨놨음, 기존에 있던거랑 겹쳐서 에러가 발생하고 있음
     # 콘솔에 SQL 출력
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-
-
+    
+# JWT 추가
+jwt:
+  secret: "9PqZK5rX2tY7uAeH4mBvQ1sD8wCjR6LfT0NqU3xY" # "교체필수-최소-32바이트-이상-랜덤또는Base64"
+  access-token-validity-seconds: 3600
+  issuer: "gym-reservation"
 
 # 로그 레벨 세팅
 logging:
-  level:
-    com.gym: info                   # 프로젝트 코드 로그 레벨
-    org.mybatis: debug              # MyBatis 프레임워크 로그
-    org.apache.ibatis: debug        # (환경에 따라) SQL 파라미터 로그
+  config: classpath:log4j2.properties
+  #config: classpath:log4j2-spring.xml
+#  level: 
+#    root: info
+#    web: info
+#    sql: info
+# 정식 절차가 아니라서 해당 것들은 필요 없음...우리는 loging 기록을 상세하게 알기 위해서 사용해야 함
+#  level:
+#    com.gym: info                   # 프로젝트 코드 로그 레벨
+#    org.mybatis: debug              # MyBatis 프레임워크 로그
+#    org.apache.ibatis: debug        # (환경에 따라) SQL 파라미터 로그
 
 # 서버 포트 세팅
 server:
-  port: 8080                        # 포트 번호
+  port: 8181                        # 포트 번호
+  
+# UI 태그 정렬
+springdoc:
+  swagger-ui:
+    tags-sorter: alpha              # 태그 정렬: alpha(알파벳), order(컨트롤러 작성순)
+    operations-sorter: method       # API 정렬: method(GET, POST, PUT, DELETE 순)

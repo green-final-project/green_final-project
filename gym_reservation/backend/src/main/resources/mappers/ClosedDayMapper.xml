@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.gym.mapper.xml.ClosedDayMapper">
+
+  <!-- 
+    휴무일 등록 쿼리
+    ClosedDay 객체를 parameter로 받아 closed_day_tbl에 insert
+  -->
+  <!-- <insert id="insertClosedDay" parameterType="com.gym.domain.closedday.ClosedDay">
+    INSERT INTO closed_day_tbl (closed_id, facility_id, closed_date, closed_content)
+    VALUES (#{closedId}, #{facilityId}, #{closedDate}, #{closedContent})
+  </insert> -->
+  <!-- 2025.09.11
+    휴무일 등록 (PK 미입력 → 트리거가 자동 채번)
+    - INSERT에서는 closed_id 컬럼/값을 제거
+    - AFTER selectKey: 동일 세션에서 CURRVAL로 방금 발급된 PK 회수
+  -->
+  <insert id="insertClosedDay" parameterType="com.gym.domain.closedday.ClosedDay">
+    <!-- AFTER 시점: 트리거가 NEXTVAL을 사용한 뒤라 CURRVAL 조회 가능 -->
+    <selectKey keyProperty="closedId" resultType="long" order="AFTER">
+      SELECT closed_day_seq.CURRVAL FROM dual
+    </selectKey>
+
+    INSERT INTO closed_day_tbl (facility_id, closed_date, closed_content)  <!-- PK 컬럼 제거 -->
+    VALUES (#{facilityId}, #{closedDate}, #{closedContent})
+  </insert>
+  
+
+  <!-- 
+    특정 시설의 휴무일 리스트 조회
+    ClosedDayResponse 타입의 리스트를 반환
+    DB 컬럼명에 대해 자바 필드명과 매핑하기 위한 alias 명시 필수
+  -->
+  <!-- <select id="selectClosedDaysByFacility" resultType="com.gym.domain.closedday.ClosedDayResponse">
+    SELECT
+      c.closed_id AS closedId,
+      c.facility_id AS facilityId,
+      f.facility_name AS facilityName,
+      c.closed_date AS closedDate,
+      c.closed_content AS closedContent
+    FROM closed_day_tbl c
+    JOIN facility_tbl f ON f.facility_id = c.facility_id
+    WHERE c.facility_id = #{facilityId}
+      AND c.closed_date BETWEEN #{fromDate} AND #{toDate}
+    ORDER BY c.closed_date
+  </select> -->
+  <select id="selectClosedDaysByFacility" resultType="com.gym.domain.closedday.ClosedDayResponse">
+  SELECT
+    c.closed_id       AS closedId,
+    c.facility_id     AS facilityId,
+    f.facility_name   AS facilityName,
+    c.closed_date     AS closedDate,
+    c.closed_content  AS closedContent
+  FROM closed_day_tbl c
+  JOIN facility_tbl f ON f.facility_id = c.facility_id
+  <where>
+    <!-- c.facility_id = #{facilityId} -->
+    <!-- 250924 개선사항 - 빈값이어도 전체 조회 -->
+    <if test="facilityId != null">
+	  c.facility_id = #{facilityId}
+	</if>
+    <if test="fromDate != null and toDate != null">
+      AND c.closed_date BETWEEN #{fromDate} AND #{toDate}
+    </if>
+    <if test="fromDate != null and toDate == null">
+      AND c.closed_date &gt;= #{fromDate}
+    </if>
+    <if test="fromDate == null and toDate != null">
+      AND c.closed_date &lt;= #{toDate}
+    </if>
+  </where>
+      ORDER BY c.closed_date
+  </select>
+  
+
+  <!-- 
+    휴무일 수정
+    parameterType map을 이용해 closedId와 변경 정보 분리
+  -->
+  <update id="updateClosedDay" parameterType="map">
+    UPDATE closed_day_tbl
+    SET facility_id = #{update.facilityId},
+        closed_date = #{update.closedDate},
+        closed_content = #{update.closedContent}
+    WHERE closed_id = #{closedId}
+  </update>
+
+  <!-- 
+    휴무일 삭제
+    closed_id 기준 삭제
+  -->
+  <delete id="deleteClosedDayById" parameterType="long">
+    DELETE FROM closed_day_tbl WHERE closed_id = #{closedId}
+  </delete>
+
+</mapper>

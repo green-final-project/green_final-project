@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gym.security.mapper.LoginQueryMapper">
+
+  <!-- 회원 아이디/암호해시 조회 -->
+  <select id="findUser" parameterType="string"
+          resultType="com.gym.security.mapper.LoginQueryMapper$LoginRow">
+    SELECT member_id AS memberId,
+           member_pw AS passwordHash
+    FROM   member_tbl
+    WHERE  member_id = #{memberId}
+  </select>
+
+  <!-- 원본 역할(user/admin/관리자/회원 등) 조회 -->
+  <select id="findRoles" parameterType="string" resultType="string">
+    SELECT member_role
+    FROM   member_tbl
+    WHERE  member_id = #{memberId}
+  </select>
+
+</mapper>
+

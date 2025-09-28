@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.gym.mapper.xml.MessageMapper">
+
+  <resultMap id="MessageResultMap" type="com.gym.domain.message.MessageResponse">
+    <id property="messageId" column="message_id"/>
+    <result property="memberId" column="member_id"/>
+    <result property="memberName" column="member_name"/>
+    <result property="resvId" column="resv_id"/>
+    <result property="closedId" column="closed_id"/>
+    <result property="messageType" column="message_type"/>
+    <result property="messageContent" column="message_content"/>
+    <result property="messageDate" column="message_date"/>
+  </resultMap>
+
+  <!-- 문자 발송 내역 저장 -->
+  <insert id="insertMessage" parameterType="com.gym.domain.message.Message" keyProperty="messageId">
+    INSERT INTO message_tbl 
+      (message_id, member_id, resv_id, closed_id, message_type, message_content, message_date)
+    VALUES 
+      (
+        seq_message_id.NEXTVAL, 
+        #{memberId, jdbcType=VARCHAR}, 
+        #{resvId, jdbcType=NUMERIC}, 
+        #{closedId, jdbcType=NUMERIC}, 
+        #{messageType, jdbcType=VARCHAR}, 
+        #{messageContent, jdbcType=CLOB}, 
+        #{messageDate, jdbcType=TIMESTAMP}
+      )
+  </insert>
+
+  <!-- 전체 문자 목록 조회(통합 검색) : 날짜/종류/수신자 동적 필터 -->
+  <select id="selectAllMessages" resultMap="MessageResultMap" parameterType="map">
+    SELECT 
+      m.message_id,
+      m.member_id,
+      mem.member_name,
+      m.resv_id,
+      m.closed_id,
+      m.message_type,
+      m.message_content,
+      m.message_date
+    FROM message_tbl m
+    LEFT JOIN member_tbl mem ON m.member_id = mem.member_id
+    <where>
+      <!-- 시작일만: startDate 이상 -->
+      <if test="startDate != null and startDate != '' and (endDate == null or endDate == '')">
+        m.message_date &gt;= TO_DATE(#{startDate}, 'YYYY-MM-DD')
+      </if>
+
+      <!-- 종료일만: endDate 당일 포함(end+1 미만) -->
+      <if test="(startDate == null or startDate == '') and endDate != null and endDate != ''">
+        m.message_date &lt; TO_DATE(#{endDate}, 'YYYY-MM-DD') + 1
+      </if>
+
+      <!-- 시작/종료 모두: [start, end+1) -->
+      <if test="startDate != null and startDate != '' and endDate != null and endDate != ''">
+        m.message_date &gt;= TO_DATE(#{startDate}, 'YYYY-MM-DD')
+        AND m.message_date &lt;  TO_DATE(#{endDate},   'YYYY-MM-DD') + 1
+      </if>
+
+      <!-- 메시지 종류: 예약확인, 예약취소, 휴관공지 -->
+      <if test="messageType != null and messageType != ''">
+        AND m.message_type = #{messageType}
+      </if>
+
+      <!-- 수신자 -->
+      <if test="receiverId != null and receiverId != ''">
+        AND m.member_id = #{receiverId}
+      </if>
+    </where>
+    ORDER BY m.message_date DESC, m.message_id DESC
+  </select>
+
+</mapper>

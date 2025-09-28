@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.gym.mapper.xml.CommentsMapper">
+
+  <!-- 댓글 등록 -->
+  <insert id="insertComments" parameterType="com.gym.domain.comments.Comments">
+    INSERT INTO comments_tbl (post_id, member_id, content, created_at, updated_at)
+    VALUES (#{postId}, #{memberId}, #{content}, SYSDATE, SYSDATE)
+  </insert>
+
+  <!-- 특정 게시글 댓글 전체 조회 -->
+  <select id="selectCommentsByPost" parameterType="long" resultType="com.gym.domain.comments.CommentsResponse">
+    SELECT comments_id, post_id, member_id, content, created_at, updated_at
+    FROM comments_tbl
+    WHERE post_id = #{postId}
+    ORDER BY created_at DESC
+  </select>
+
+  <!-- 댓글 단건 조회 -->
+  <select id="selectCommentsById" parameterType="long" resultType="com.gym.domain.comments.CommentsResponse">
+    SELECT comments_id, post_id, member_id, content, created_at, updated_at
+    FROM comments_tbl
+    WHERE comments_id = #{commentsId}
+  </select>
+
+  <!-- 회원ID + 댓글ID 기준 댓글 수정 -->
+  <update id="updateCommentsByMember" parameterType="map">
+    UPDATE comments_tbl
+    SET content = #{content}, updated_at = SYSDATE
+    WHERE comments_id = #{commentsId}
+      AND member_id = #{memberId}
+  </update>
+
+  <!-- 댓글 삭제 -->
+  <delete id="deleteCommentsById" parameterType="long">
+    DELETE FROM comments_tbl
+    WHERE comments_id = #{commentsId}
+  </delete>
+
+</mapper>
