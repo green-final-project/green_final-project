@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- Paylog 조회: DB 컬럼과 정확히 일치시키는 별칭만 사용 -->
+<mapper namespace="com.gym.mapper.xml.PaylogMapper">
+
+  <!-- ✅ 실제 존재하는 컬럼만 선택 + CamelCase 별칭 부여 -->
+  <sql id="cols">
+    l.paylog_id            AS paylogId,         <!-- PK        : paylog_tbl.paylog_id -->
+    l.payment_id           AS paymentId,        <!-- FK        : paylog_tbl.payment_id -->
+    l.paylog_money         AS paylogMoney,      <!-- 금액      : paylog_tbl.paylog_money -->
+    l.paylog_method        AS paylogMethod,     <!-- 방식      : paylog_tbl.paylog_method -->
+    l.paylog_manager       AS paylogManager,    <!-- 처리자    : paylog_tbl.paylog_manager -->
+    l.paylog_memo          AS paylogMemo,       <!-- 메모      : paylog_tbl.paylog_memo -->
+    l.paylog_before_status AS beforeStatus,     <!-- 변경 전   : paylog_tbl.paylog_before_status -->
+    l.paylog_after_status  AS afterStatus,      <!-- 변경 후   : paylog_tbl.paylog_after_status -->
+    l.paylog_date          AS paylogDate        <!-- 로그시각  : paylog_tbl.paylog_date -->
+    <!-- 참고: paylog_type도 스키마에 존재하지만 현재 DTO에 필드가 없으므로 제외(원하면 아래 행을 해제)
+         , l.paylog_type AS paylogType -->
+  </sql>
+
+  <!-- 결제ID별 로그 목록(최신순) -->
+  <select id="selectByPaymentId"
+          resultType="com.gym.domain.payment.PaylogResponse">
+    SELECT
+      <include refid="cols"/>
+    FROM paylog_tbl l                           <!-- 결제 로그 테이블 -->
+    WHERE l.payment_id = #{paymentId}           <!-- 결제 PK로 필터 -->
+    ORDER BY l.paylog_id DESC                   <!-- 최신 로그부터 -->
+  </select>
+
+</mapper>

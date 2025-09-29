@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.gym.mapper.xml.FileQueryMapper">       <!-- 인터페이스 FQN 일치 -->
+
+  <!-- <resultMap id="FileMap" type="com.gym.domain.file.File"> -->    <!-- 컬럼→필드 매핑 -->
+  <resultMap id="FileResponseMap" type="com.gym.domain.file.FileResponse"> <!-- Response로 변경 -->
+  <id     column="file_id"          property="fileId"/>        <!-- PK -->
+  <result column="member_id"        property="memberId"/>      <!-- [250923추가] 회원ID -->
+  <result column="file_target_type" property="fileTargetType"/> <!-- 타겟 타입 -->
+  <result column="file_target_id"   property="fileTargetId"/>   <!-- 타겟 PK -->
+  <result column="file_name"        property="fileName"/>       <!-- 파일명 -->
+  <result column="file_path"        property="filePath"/>       <!-- 저장 경로 -->
+  <result column="file_type"        property="fileType"/>       <!-- MIME/구분 -->
+  <result column="file_ext"         property="fileExt"/>        <!-- 확장자 -->
+  <result column="file_size"        property="fileSize"/>       <!-- 크기(byte) -->
+  <result column="file_reg_date"    property="fileRegDate"/>    <!-- 등록일시 -->
+</resultMap>
+
+  <!-- 목록/조건 조회 (fileId가 우선 조건) -->
+  <!-- <select id="selectFiles" resultMap="FileMap"> -->
+  <select id="selectFiles" 
+  		  parameterType="com.gym.domain.file.FileRequest" 
+  		  resultType="com.gym.domain.file.FileResponse"> <!-- resultMap="FileResponseMap 파라미터 DTO: FileRequest -->
+    SELECT
+      file_id,
+      member_id, <!-- [250923추가] 회원ID --> 
+      file_target_type,
+      file_target_id,
+      file_name,
+      file_path,
+      file_type,
+      file_ext,
+      file_size,
+      file_reg_date
+    FROM file_tbl
+    WHERE 1=1
+      <!-- ★ fileId가 들어오면 그 파일로 필터링(가장 강한 조건) -->
+      <if test="fileId != null">
+        AND file_id = #{fileId}
+      </if>
+      <!-- 아래 두 조건은 fileId가 없을 때 의미 -->
+      <if test="fileTargetType != null and fileTargetType != ''"> <!-- test="TargetType" → test="fileTargetType"로 변경  -->
+        AND file_target_type = #{fileTargetType}
+      </if>
+      <if test="fileTargetId != null and fileTargetId != ''">
+        AND file_target_id = #{fileTargetId}
+      </if>
+    ORDER BY file_id DESC
+    
+    <!-- 페이지네이션(Oracle): FileRequest에 page/size가 있을 때만 적용 -->
+    <!-- <if test="page != null and size != null">
+      OFFSET #{page} * #{size} ROWS FETCH NEXT #{size} ROWS ONLY
+    </if> -->
+  </select>
+
+ <!-- [250923추가] 파일명 단건 조회: 미리보기/다운로드에서 사용 -->
+	<select id="selectFileByName" resultMap="FileResponseMap" 
+		parameterType="java.lang.String">
+		SELECT *
+		FROM (
+		SELECT
+		file_id,
+		member_id,
+		file_target_type,
+		file_target_id,
+		file_name,
+		file_path,
+		file_type,
+		file_ext,
+		file_size,
+		file_reg_date
+		FROM file_tbl
+		WHERE
+		(
+		<!--[250923] 지금은 괜찮지만, 추후 인자를 3개씩이나 만들어야 함...귀찮아질 수 있음...-->
+		file_name = #{fileName}    <!-- @Param("fileName")와 1:1 -->
+		OR file_name = #{value}    <!-- 단일 파라미터 전달 시 MyBatis가 제공하는 이름(value) 참고 -->
+		OR file_name = #{param1}   <!-- 일부 환경/바인딩에서 param1으로 전달될 수 있으므로 보조로 추가 -->
+		)
+		ORDER BY file_id DESC      <!-- 동일 이름 다수 시 최신 1건 우선 -->
+		)
+		WHERE ROWNUM = 1            <!-- Oracle 1건 제한 -->
+	</select>
+  
+  <!-- ★추가: 파일 PK로 단건 조회 (fileId 기반) -->
+  <select id="selectFileById" resultMap="FileResponseMap" parameterType="long">
+    SELECT
+      file_id,
+      member_id,
+      file_target_type,
+      file_target_id,
+      file_name,
+      file_path,
+      file_type,
+      file_ext,
+      file_size,
+      file_reg_date
+    FROM file_tbl
+    WHERE file_id = #{fileId}
+  </select>
+  
+  <!-- 총 개수 -->
+  <select id="countFiles" resultType="long">
+    SELECT COUNT(*)
+    FROM file_tbl
+    WHERE 1=1
+      <if test="targetType != null and targetType != ''">
+        AND file_target_type = #{targetType}
+      </if>
+      <if test="targetId != null and targetId != ''">
+        AND file_target_id = #{targetId}
+      </if>
+  </select>
+
+</mapper>

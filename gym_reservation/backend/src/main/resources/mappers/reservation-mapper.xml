@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+	<!-- ======================================================================
+     파일: reservation-mapper.xml
+     네임스페이스: com.gym.mapper.xml.ReservationQueryMapper
+     역할: (1) 예약 목록 조회(선택 필터: resvId, memberId, facilityId)
+           (2) 시설별 시간대 중복 여부 확인
+     주의:
+       - resultType은 응답 DTO인 ReservationResponse로 고정 [수정]
+       - 동적 where는 파라미터 객체 'req(ReservationSearchRequest)' 기준 [수정]
+       - 날짜/시간 매핑: TIMESTAMP -> LocalDate(LocalDateTime) 안정 매핑을 위해 TRUNC 사용 [수정]
+     ====================================================================== -->
+	<mapper namespace="com.gym.mapper.xml.ReservationQueryMapper">
+
+    <!-- ================================================================
+         [수정] 예약 목록 조회
+         - 파라미터: req (ReservationSearchRequest)
+           * req.resvId     : 예약ID(선택)
+           * req.memberId   : 회원ID(선택)
+           * req.facilityId : 시설ID(선택)
+         - 미입력 시 전체 조회
+         - 매핑:
+           * want_date/resv_date  -> LocalDate 매핑을 위해 TRUNC 적용
+           * resv_start_time/end_time -> LocalDateTime 그대로
+           * resultType: com.gym.domain.reservation.ReservationResponse
+           * 다른 테이블과의 구분을 위해서 접두어 추가시킴 (r., m., f. )
+         ================================================================ -->
+    <select id="listReservations" resultType="com.gym.domain.reservation.ReservationResponse">
+    <!-- <select id="listReservations" parameterType="map" resultMap="ReservationMap"> -->
+    		SELECT
+		        r.resv_id             AS resvId,           -- 예약 고유번호
+		        r.member_id           AS memberId,         -- 회원ID
+		        m.member_name         AS memberName,       -- [250919추가] 회원명
+		        r.facility_id         AS facilityId,       -- 시설ID
+		        f.facility_name       AS facilityName,     -- [250919추가] 시설명
+		        r.resv_content        AS resvContent,      -- 요구사항
+		        TRUNC(r.want_date)    AS wantDate,         -- [수정] TIMESTAMP -> DATE로 잘라 LocalDate 매핑 안정화
+		        TRUNC(r.resv_date)    AS resvDate,         -- [수정] 동일 처리
+		        r.resv_person_count   AS resvPersonCount,  -- 신청 인원
+		        r.resv_status         AS resvStatus,       -- 상태
+		        r.facility_money      AS facilityMoney,    -- 이용료(스냅샷)
+		        r.resv_start_time     AS resvStartTime,    -- 시작일시(LocalDateTime)
+		        r.resv_end_time       AS resvEndTime,      -- 종료일시(LocalDateTime)
+		        r.resv_money          AS resvMoney,        -- 총 금액
+		        r.resv_cancel         AS resvCancel,       -- [250919추가] 취소신청
+		        r.resv_cancel_reason  AS resvCancelReason  -- [250919추가] 취소사유
+		    FROM reservation_tbl r
+		    JOIN member_tbl   m ON m.member_id = r.member_id   -- [250919추가] 회원명 JOIN
+		    JOIN facility_tbl f ON f.facility_id = r.facility_id   -- [250919추가] 시설명 JOIN
+		    <where>
+            <!-- [추가] 예약ID 조건 -->
+            <if test="req.resvId != null">
+                AND r.resv_id = #{req.resvId}
+            </if>
+
+            <!-- [수정] 회원ID 조건(userId -> memberId) -->
+            <if test="req.memberId != null and req.memberId != ''">
+                AND r.member_id = #{req.memberId}
+            </if>
+
+            <!-- 시설ID 조건 -->
+            <if test="req.facilityId != null">
+                AND r.facility_id = #{req.facilityId}
+            </if>
+        </where>
+        <!-- ORDER BY resv_id DESC -->
+        <!-- 250925 변경 -->
+        ORDER BY r.resv_id DESC
+        
+        <!-- [삭제] 페이징(요청에 따라 사용하지 않음)
+        <if test="page != null and size != null">
+            OFFSET #{page} * #{size} ROWS FETCH NEXT #{size} ROWS ONLY
+        </if>
+        -->
+    </select>
+
+    <!-- ================================================================
+         [추가] 시간대 중복 여부 확인
+         - 파라미터:
+           * facilityId      : 시설ID (필수)
+           * resvStartTime   : 신청 시작일시(LocalDateTime) (필수)
+           * resvEndTime     : 신청 종료일시(LocalDateTime) (필수)
+         - 로직:
+           * (기존시작 < 신규종료) AND (기존종료 > 신규시작) 이면 겹침
+         - 반환: boolean (COUNT>0)
+         - 서비스에서 true면 "이미 예약되어 있는 상태입니다" 메시지 처리
+         ================================================================ -->
+    <select id="existsOverlapReservation" resultType="boolean">
+    SELECT CASE WHEN COUNT(1) > 0 THEN 1 ELSE 0 END
+      FROM reservation_tbl
+     WHERE facility_id = #{facilityId}
+       AND resv_status = '완료'
+       AND resv_start_time &lt; #{resvEndTime}
+       AND resv_end_time   &gt; #{resvStartTime}
+	</select>
+	
+	<!-- ================================================================
+         [250925추가] 예약ID로 신청자ID 조회
+         - 파라미터: resvId(Long)
+         - 반환: member_id(String)
+         ================================================================ -->
+    <select id="selectMemberIdByResvId" parameterType="long" resultType="string">
+        SELECT r.member_id
+        FROM reservation_tbl r
+        WHERE r.resv_id = #{resvId}
+    </select>
+	
+
+</mapper>

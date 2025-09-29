@@ -23,3 +23,4 @@ public class OpenApiConfig {                                    // 📖 Swagger 
             .version("v1"));                                     // 문서 버전
     }
 }
+

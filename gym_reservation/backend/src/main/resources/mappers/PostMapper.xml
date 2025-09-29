@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.gym.mapper.xml.PostMapper">
+
+  <!-- 결과 매핑: PostResponse DTO에 DB 컬럼을 매핑 -->
+  <resultMap id="PostResultMap" type="com.gym.domain.post.PostResponse">
+    <id     property="postId"       column="post_id"/>
+    <result property="boardId"      column="board_id"/>
+    <result property="boardPostNo"  column="board_post_no"/>  <!-- [250924추가] 게시판별 번호 -->
+    <result property="postTitle"    column="post_title"/>
+    <result property="postContent"  column="post_content"/>
+    <result property="memberId"     column="member_id"/>
+    <result property="memberName"   column="member_name"/>
+    <result property="postRegDate"  column="post_reg_date"/>
+    <result property="postViewCount" column="post_view_count"/>
+    <result property="postNotice"   column="post_notice"/>
+    <result property="postSecret"   column="post_secret"/>
+    <result property="postType"     column="post_type"/>
+  </resultMap>
+
+  <!-- 게시글 등록 -->
+  <!-- ===== [원본 보존: BEFORE selectKey 방식] =====
+  <insert id="insertPost" parameterType="com.gym.domain.post.Post" keyProperty="postId">
+    <selectKey keyProperty="postId" resultType="long" order="BEFORE">
+      SELECT post_seq.NEXTVAL FROM dual
+    </selectKey>
+    INSERT ...
+  </insert>
+  -->
+
+  <!-- ===== [원본 보존: NEXTVAL + AFTER CURRVAL 방식] =====
+  <insert id="insertPost" parameterType="com.gym.domain.post.Post" keyProperty="postId">
+    INSERT INTO post_tbl (
+      post_id, board_id, post_title, post_content, member_id,
+      post_reg_date, post_mod_date, post_view_count, post_notice, post_secret, post_type
+    ) VALUES (
+      post_seq.NEXTVAL,
+      #{boardId}, #{postTitle}, #{postContent}, #{memberId},
+      SYSDATE, NULL, 0,
+      <choose>
+        <when test="postNotice"> 'Y' </when>
+        <otherwise> 'N' </otherwise>
+      </choose>,
+      <choose>
+        <when test="postSecret"> 'Y' </when>
+        <otherwise> 'N' </otherwise>
+      </choose>,
+      #{postType}
+    )
+    <selectKey keyProperty="postId" resultType="long" order="AFTER">
+      SELECT post_seq.CURRVAL FROM dual
+    </selectKey>
+  </insert>
+  -->
+
+  <!-- 25년 9월 11일 최종본: 트리거가 PK 채움 → VALUES에는 NULL, AFTER에서 CURRVAL 회수 -->
+  <!-- [250924정리] board_post_no는 DB 트리거나 별도 로직에서 채워짐(INSERT에서는 관여하지 않음) -->
+  <insert id="insertPost"
+          parameterType="com.gym.domain.post.Post"
+          keyProperty="postId">
+    INSERT INTO post_tbl (
+      post_id, board_id, post_title, post_content, member_id,
+      post_reg_date, post_mod_date, post_view_count,
+      post_notice, post_secret, post_type
+    ) VALUES (
+      NULL,
+      #{boardId}, #{postTitle}, #{postContent}, #{memberId},
+      SYSDATE, NULL, 0,
+      <choose><when test="postNotice"> 'Y' </when><otherwise> 'N' </otherwise></choose>,
+      <choose><when test="postSecret"> 'Y' </when><otherwise> 'N' </otherwise></choose>,
+      #{postType}
+    )
+    <!-- 🔽 같은 세션 내에서 방금 INSERT된 시퀀스의 CURRVAL로 PK 회수 -->
+    <selectKey keyProperty="postId" resultType="long" order="AFTER">
+      SELECT post_seq.CURRVAL FROM dual
+    </selectKey>
+  </insert>
+
+  <!-- 게시글 수정: 수정일 SYSDATE, boolean → 'Y'/'N' -->
+  <!-- parameterType=PostResponse 유지 (인터페이스와 일치) -->
+  <!-- [참고] WHERE는 기존 post_id 단독을 유지 -->
+  <update id="updatePost" parameterType="com.gym.domain.post.PostResponse">
+    UPDATE post_tbl SET
+      post_title    = #{postTitle},
+      post_content  = #{postContent},
+      post_mod_date = SYSDATE,
+      post_notice =
+        <choose>
+          <when test="postNotice == true"> 'Y' </when>
+          <otherwise> 'N' </otherwise>
+        </choose>,
+      post_secret =
+        <choose>
+          <when test="postSecret == true"> 'Y' </when>
+          <otherwise> 'N' </otherwise>
+        </choose>,
+      post_type = #{postType}
+    WHERE post_id = #{postId}
+  </update>
+
+  <!-- 게시판별 게시글 목록 조회 (페이징, 검색, 공지 필터 포함) -->
+  <select id="selectPostsByBoard" resultMap="PostResultMap" parameterType="map">
+    SELECT
+      p.post_id,
+      p.board_id,
+      p.board_post_no,                         <!-- ✔ 추가 -->
+      p.post_title, p.post_content, p.member_id,
+      m.member_name,
+      p.post_reg_date, p.post_view_count, p.post_notice, p.post_secret, p.post_type
+    FROM post_tbl p
+    LEFT JOIN member_tbl m ON p.member_id = m.member_id
+    WHERE p.board_id = #{boardId}
+      <if test="keyword != null and keyword.trim() != ''">
+        AND (p.post_title LIKE '%' || #{keyword} || '%' OR p.post_content LIKE '%' || #{keyword} || '%')
+      </if>
+      <if test="notice != null">
+        AND p.post_notice = (CASE WHEN #{notice} THEN 'Y' ELSE 'N' END)
+      </if>
+    <!-- ✔ 정렬: 공지 우선 → 게시판별 번호 최신순 -->
+    ORDER BY
+      CASE WHEN p.post_notice = 'Y' THEN 0 ELSE 1 END,
+      p.board_post_no DESC
+    OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+  </select>
+
+  <!-- 단건 조회 -->
+  <select id="selectPostById" resultMap="PostResultMap" parameterType="long">
+    SELECT
+      p.post_id,
+      p.board_id,
+      p.board_post_no,                         <!-- ✔ 추가 -->
+      p.post_title, p.post_content, p.member_id,
+      m.member_name,
+      p.post_reg_date, p.post_view_count, p.post_notice, p.post_secret, p.post_type
+    FROM post_tbl p
+    LEFT JOIN member_tbl m ON p.member_id = m.member_id
+    WHERE p.post_id = #{postId}
+  </select>
+
+  <!-- 삭제 -->
+  <!-- [주의] 서비스 시그니처를 유지하기 위해 기존 post_id 단독 조건을 그대로 둡니다 -->
+  <delete id="deletePostById" parameterType="long">
+    DELETE FROM post_tbl WHERE post_id = #{postId}
+  </delete>
+
+  <!-- 개수 -->
+  <select id="countPostsByBoard" resultType="int" parameterType="map">
+    SELECT COUNT(*)
+    FROM post_tbl p
+    WHERE p.board_id = #{boardId}
+      <if test="keyword != null and keyword.trim() != ''">
+        AND (p.post_title LIKE '%' || #{keyword} || '%' OR p.post_content LIKE '%' || #{keyword} || '%')
+      </if>
+      <if test="notice != null">
+        AND p.post_notice = (CASE WHEN #{notice} THEN 'Y' ELSE 'N' END)
+      </if>
+  </select>
+
+  <!-- ★ 추가: FK 사전검증 -->
+  <select id="existsBoardId" resultType="boolean" parameterType="long">
+    SELECT CASE WHEN COUNT(1) > 0 THEN 1 ELSE 0 END
+    FROM board_tbl
+    WHERE board_id = #{boardId}
+  </select>
+
+  <select id="existsMemberId" resultType="boolean" parameterType="string">
+    SELECT CASE WHEN COUNT(1) > 0 THEN 1 ELSE 0 END
+    FROM member_tbl
+    WHERE member_id = #{memberId}
+  </select>
+  
+  <!-- [250925추가] 게시글 조회수 1 증가 -->
+	<update id="increaseViewCount" parameterType="long">
+	    UPDATE post_tbl
+	    SET post_view_count = post_view_count + 1
+	    WHERE post_id = #{postId}
+	</update>
+	  
+
+</mapper>

@@ -3,25 +3,84 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="mapper.log4j2-spring"></mapper> -->
 
-<Configuration status="WARN">
+<!-- <Configuration status="WARN"> -->
+<Configuration>
+  
   <Properties>
-    <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%t] %c{1.} - %msg%n</Property>
+    <Property name="LOG_PATTERN">
+    	%d{yyyy-MM-dd HH:mm:ss.SSS} 
+    	[%-5level] [%t] %c{1.} - %msg%n%n
+    </Property>
     <Property name="LOG_DIR">logs</Property>
   </Properties>
+  
   <Appenders>
+  
     <Console name="Console" target="SYSTEM_OUT">
       <PatternLayout pattern="${LOG_PATTERN}"/>
     </Console>
+    
+    <!-- App파일로 로그 기록 저장하기 -->
     <RollingFile name="AppFile" fileName="${LOG_DIR}/app.log"
-                 filePattern="${LOG_DIR}/app-%d{yyyy-MM-dd}.log.gz">
+                 filePattern="${LOG_DIR}/app-%d{yyyy-MM-dd}.log">
+      
       <PatternLayout pattern="${LOG_PATTERN}"/>
-      <Policies><TimeBasedTriggeringPolicy interval="1" modulate="true"/></Policies>
+      
+      <Policies>
+      	<TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+      </Policies>
+      
     </RollingFile>
+    
   </Appenders>
+  
   <Loggers>
+  
     <Logger name="com.gym" level="info" additivity="false">
       <AppenderRef ref="Console"/><AppenderRef ref="AppFile"/>
-    </Logger>
-    <Root level="info"><AppenderRef ref="Console"/></Root>
+    </Logger>  
+    
+    <!-- log4jdbc -->
+          
+     <Logger name="jdbc.sqltiming" additivity="false">
+        <Level value="WARN" />
+        <AppenderRef ref="Console"/>
+        <AppenderRef ref="AppFile"/> 
+     </Logger>
+  
+     <Logger name="jdbc.sqlonly" additivity="false"> 
+        <Level value="INFO"/> 
+        <AppenderRef ref="Console"/>
+        <AppenderRef ref="AppFile"/> 
+     </Logger>
+  
+     <Logger name="jdbc.audit" additivity="false"> 
+        <Level value="warn"/>  
+        <AppenderRef ref="Console"/>
+        <AppenderRef ref="AppFile"/> 
+     </Logger> 
+  
+     <Logger name="jdbc.resultset" additivity="false">
+        <Level value="warn" />
+        <AppenderRef ref="Console"/>
+        <AppenderRef ref="AppFile"/> 
+     </Logger>
+  
+     <Logger name="jdbc.resultsettable" additivity="false"> 
+        <Level value="INFO"/>  
+        <AppenderRef ref="Console"/>
+        <AppenderRef ref="AppFile"/> 
+     </Logger> 
+   
+   <!-- log4jdbc -->
+    
+    <Root level="info">
+    
+    	<AppenderRef ref="Console"/>
+    	
+    	<!-- 모든 로그를 파일로 저장하기 -->
+    	<AppenderRef ref="AppFile"/>
+    
+    </Root>
   </Loggers>
 </Configuration>
