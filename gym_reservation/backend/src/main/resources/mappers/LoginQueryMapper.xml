@@ -3,7 +3,7 @@
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.gym.security.mapper.LoginQueryMapper">
 
-  <!-- 회원 아이디/암호해시 조회 -->
+  <!-- [1] 로그인용 계정 아이디/암호해시 조회 -->
   <select id="findUser" parameterType="string"
           resultType="com.gym.security.mapper.LoginQueryMapper$LoginRow">
     SELECT member_id AS memberId,
@@ -12,12 +12,34 @@
     WHERE  member_id = #{memberId}
   </select>
 
-  <!-- 원본 역할(user/admin/관리자/회원 등) 조회 -->
+  <!-- [2] 회원 권한 조회 -->
   <select id="findRoles" parameterType="string" resultType="string">
     SELECT member_role
     FROM   member_tbl
     WHERE  member_id = #{memberId}
   </select>
 
+  <!-- [3⚠️] 회원 전체 정보 조회 [250930] -->
+  <select id="selectMemberById" parameterType="string"
+          resultType="com.gym.domain.member.Member">
+    SELECT
+      member_id       AS memberId,
+      member_pw       AS memberPw,
+      member_name     AS memberName,
+      member_gender   AS memberGender,
+      member_email    AS memberEmail,
+      member_mobile   AS memberMobile,
+      member_phone    AS memberPhone,
+      zip             AS zip,
+      road_address    AS roadAddress,
+      jibun_address   AS jibunAddress,
+      detail_address  AS detailAddress,
+      member_birthday AS memberBirthday,
+      member_manipay  AS memberManipay,
+      member_joindate AS memberJoindate,
+      member_role     AS memberRole,
+      admin_type      AS adminType
+    FROM member_tbl
+    WHERE member_id = #{memberId}
+  </select>
 </mapper>
-

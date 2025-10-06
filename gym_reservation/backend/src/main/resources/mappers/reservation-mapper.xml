@@ -106,6 +106,33 @@
         FROM reservation_tbl r
         WHERE r.resv_id = #{resvId}
     </select>
-	
+
+	<!-- ================================================================
+         [251002 신규] 예약 단건 조회
+         ================================================================ -->	
+	<select id="getReservation" parameterType="long" resultType="com.gym.domain.reservation.ReservationResponse">
+	    SELECT
+	        r.resv_id            AS resvId,
+	        r.member_id          AS memberId,
+	        m.member_name        AS memberName,
+	        r.facility_id        AS facilityId,
+	        f.facility_name      AS facilityName,
+	        r.resv_content       AS resvContent,
+	        TRUNC(r.want_date)   AS wantDate,
+	        TRUNC(r.resv_date)   AS resvDate,
+	        r.resv_person_count  AS resvPersonCount,
+	        r.resv_status        AS resvStatus,
+	        r.facility_money     AS facilityMoney,
+	        r.resv_start_time    AS resvStartTime,
+	        r.resv_end_time      AS resvEndTime,
+	        r.resv_money         AS resvMoney,
+	        r.resv_cancel        AS resvCancel,
+	        r.resv_cancel_reason AS resvCancelReason
+	    FROM reservation_tbl r
+	    JOIN member_tbl m ON m.member_id = r.member_id
+	    JOIN facility_tbl f ON f.facility_id = r.facility_id
+	    WHERE r.resv_id = #{resvId}
+	</select>
+		
 
 </mapper>

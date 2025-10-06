@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- [설명] CMS 통계 조회용 SQL -->
+<!-- - 각 테이블의 COUNT(*) 결과를 단일 Map으로 반환 -->
+<!-- - CmsHome.tsx에서 axios.get("/api/cms/stats") 호출 시 사용 -->
+
+<mapper namespace="com.gym.mapper.annotation.CmsStatsMapper">
+
+	<!-- 주요 서비스 통계 -->
+	<select id="selectStats" resultType="map">
+		SELECT
+		(SELECT COUNT(*) FROM member_tbl) AS memberCount, -- 가입한 회원 수
+		(SELECT COUNT(*) FROM facility_tbl) AS facilityCount, -- 시설 개수
+		(SELECT COUNT(*) FROM post_tbl) AS postCount, -- 게시글 개수
+		(SELECT COUNT(*) FROM gym.contents_tbl) AS contentCount, -- 콘텐츠 개수
+		(SELECT COUNT(*) FROM reservation_tbl) AS reservationCount, -- 전체 예약 수
+		(SELECT COUNT(*) FROM reservation_tbl WHERE resv_status = '완료') AS
+		reservationDoneCount, -- 완료된 예약
+		(SELECT COUNT(*) FROM reservation_tbl WHERE resv_status = '대기') AS
+		reservationPendingCount, -- 대기 중 예약
+		(SELECT COUNT(*) FROM reservation_tbl WHERE resv_status = '취소') AS
+		reservationCancelCount -- 취소된 예약
+		FROM dual
+	</select>
+
+	<!-- 예약신청 근황 -->
+	<select id="selectFacilityStats" resultType="map">
+		SELECT
+		facility_type AS facilityType,
+		COUNT(*) AS facilityCount
+		FROM facility_tbl
+		GROUP BY facility_type
+		ORDER BY facility_type
+	</select>
+
+	<!-- 시설별 예약신청 근황 수영장/농구장/풋살장/배드민턴장/볼링장 기준으로 대기/완료/취소 비율 표시 -->
+	<select id="selectFacilityStatusStats" resultType="map">
+		SELECT
+		f.facility_type AS facilityType, -- 시설 종류명
+		SUM(CASE WHEN r.resv_status = '완료' THEN 1 ELSE 0 END) AS doneCount, -- 완료 수
+		SUM(CASE WHEN r.resv_status = '대기' THEN 1 ELSE 0 END) AS
+		pendingCount,-- 대기 수
+		SUM(CASE WHEN r.resv_status = '취소' THEN 1 ELSE 0 END) AS cancelCount -- 취소 수
+		FROM facility_tbl f
+		LEFT JOIN reservation_tbl r
+		ON f.facility_id = r.facility_id
+		GROUP BY f.facility_type
+		ORDER BY f.facility_type
+	</select>
+
+
+</mapper>

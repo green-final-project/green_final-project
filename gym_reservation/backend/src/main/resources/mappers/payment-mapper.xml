@@ -49,7 +49,8 @@
 			resv_id,
 			payment_money,
 			payment_method,
-			payment_status
+			payment_status,
+			card_installment   <!-- [251004] 카드 할부신청 추가 -->
 		)
 		SELECT
 			payment_seq.NEXTVAL, -- [PK값 증가]조건 만족시에만 NEXTVAL(DDL에서 트리거 설정함) 호출 
@@ -61,7 +62,8 @@
 			#{p.paymentMoney},
 			#{p.paymentMethod},
 		 
-		NVL(#{p.paymentStatus, jdbcType=VARCHAR}, '예약') -- 파라미터가 NULL일 경우 자동으로 '예약'으로 등록
+		NVL(#{p.paymentStatus, jdbcType=VARCHAR}, '예약'), -- 파라미터가 NULL일 경우 자동으로 '예약'으로 등록
+		NVL(#{p.cardInstallment, jdbcType=NUMERIC}, 0)  -- [251004] 카드 할부신청 추가 
 				
 		FROM member_tbl m	-- 회원테이블의 id값 존재 여부 확인
 		JOIN reservation_tbl r ON r.resv_id = #{p.resvId} -- 신청테이블의 id값 존재 여부 확인 

@@ -19,6 +19,7 @@
     <result column="facility_open_time"  property="facilityOpenTime"/>
     <result column="facility_close_time" property="facilityCloseTime"/>
     <result column="facility_money"      property="facilityMoney"/>
+    <result column="facility_type"   property="facilityType"/> <!-- ⚠️ [251001] 카테고리 매핑 추가 -->
   </resultMap>
 
   <!-- 목록/검색 -->
@@ -37,7 +38,8 @@
       f.facility_mod_date,
       TO_CHAR(f.facility_open_time,'HH24:MI') AS facility_open_time,
       TO_CHAR(f.facility_close_time,'HH24:MI') AS facility_close_time,
-      f.facility_money
+      f.facility_money,
+      f.facility_type <!-- ⚠️ [251001] 카테고리 컬럼 조회 추가 -->
     FROM facility_tbl f
     <where>
       <if test="name != null and name != ''">
@@ -45,6 +47,10 @@
       </if>
       <if test="facilityUse != null">
         AND f.facility_use = (CASE WHEN #{facilityUse} THEN 'Y' ELSE 'N' END)
+      </if>
+      <!-- ⚠️ [251001] 카테고리 필터 -->
+      <if test="type != null and type != ''">
+        AND f.facility_type = #{type} 
       </if>
     </where>
 
@@ -80,7 +86,8 @@
 	</choose>
 
 
-    <!-- 페이징 -->
+    <!-- 페이징{page-1}로 해야지, 1페이지부터 조회됨, 하지만 리턴하는 과정에서 문제가 발생함으로 
+    	컨트롤러의 PageResponse<FacilityResponse> pr = facilityService.searchFacilities(name, null, page-1, size, null, facilityType);처리 -->
     <if test="page != null and size != null">
       OFFSET #{page} * #{size} ROWS FETCH NEXT #{size} ROWS ONLY
     </if>
@@ -95,6 +102,10 @@
       </if>
       <if test="facilityUse != null">
         AND f.facility_use = (CASE WHEN #{facilityUse} THEN 'Y' ELSE 'N' END)
+      </if>
+      <!-- ⚠️ [251001] 카테고리 필터 -->
+      <if test="type != null and type != ''">
+        AND f.facility_type = #{type} 
       </if>
     </where>
   </select>

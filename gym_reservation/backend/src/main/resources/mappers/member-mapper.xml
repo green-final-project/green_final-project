@@ -26,7 +26,7 @@
 	</resultMap>
 
 	<!-- [250926 수정] 회원 등록 -->
-	<insert id="insertMember"
+	<!-- <insert id="insertMember"
 		parameterType="com.gym.domain.member.Member">
 		INSERT INTO member_tbl (
 		member_id,
@@ -57,14 +57,50 @@
 		#{jibunAddress, jdbcType=VARCHAR},
 		#{detailAddress, jdbcType=VARCHAR},
 		#{memberBirthday, jdbcType=DATE},
-		<!-- #{memberManipay, jdbcType=NUMERIC}, -->   <!-- ✅ NUMBER → NUMERIC -->
+		#{memberManipay, jdbcType=NUMERIC},   ✅ NUMBER → NUMERIC
 		#{memberManipay, jdbcType=VARCHAR}
 		#{memberRole, jdbcType=VARCHAR},
 		#{adminType, jdbcType=VARCHAR}
 		)
+	</insert> -->
+	
+	<insert id="insertMember" parameterType="com.gym.domain.member.Member">
+	  INSERT INTO member_tbl (
+	    member_id,
+	    member_pw,
+	    member_name,
+	    member_gender,
+	    member_email,
+	    member_mobile,
+	    member_phone,
+	    zip,
+	    road_address,
+	    jibun_address,
+	    detail_address,
+	    member_birthday,
+	    member_manipay,
+	    member_role,
+	    admin_type
+	  )
+	  VALUES (
+	    #{memberId, jdbcType=VARCHAR},
+	    #{memberPw, jdbcType=VARCHAR},
+	    #{memberName, jdbcType=VARCHAR},
+	    #{memberGender, jdbcType=CHAR},
+	    #{memberEmail, jdbcType=VARCHAR},
+	    #{memberMobile, jdbcType=VARCHAR},
+	    #{memberPhone, jdbcType=VARCHAR},
+	    #{zip, jdbcType=VARCHAR},             <!-- ✅ null이면 VARCHAR 타입 null -->
+	    #{roadAddress, jdbcType=VARCHAR},     <!-- ✅ 필수 -->
+	    #{jibunAddress, jdbcType=VARCHAR},    <!-- ✅ 필수 -->
+	    #{detailAddress, jdbcType=VARCHAR},   <!-- ✅ 필수 -->
+	    #{memberBirthday, jdbcType=DATE},     <!-- ✅ 날짜 null 가능 -->
+	    #{memberManipay, jdbcType=VARCHAR},   <!-- or NUMERIC -->
+	    #{memberRole, jdbcType=VARCHAR},
+	    #{adminType, jdbcType=VARCHAR}
+	  )
 	</insert>
-
-
+	
 
 
 	<!-- [250926 수정] 회원 단건 조회 -->
@@ -91,6 +127,7 @@
 			<if test="memberEmail != null">member_email = #{memberEmail},</if>
 			<if test="memberMobile != null">member_mobile = #{memberMobile},</if>
 			<if test="memberPhone != null">member_phone = #{memberPhone, jdbcType=VARCHAR},</if>
+			<if test="zip != null">zip = #{zip},</if> <!-- [251005] zip추가 -->
 			<if test="roadAddress != null">road_address = #{roadAddress},</if>
 			<if test="detailAddress != null">detail_address = #{detailAddress},</if>
 		</set>
