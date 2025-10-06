@@ -24,6 +24,7 @@ import java.util.List;                                       // 목록
  * - 소유자 강제: 로그인한 회원ID만 허용(모든 요청에서 사용자ID는 입력받지 않음)
  * - 입력 형식: application/x-www-form-urlencoded (폼 전송)
  */
+@CrossOrigin("*") // [251002] 프론트엔드 Http 허용
 @Tag(name = "09.Reservation-User", description = "사용자용 예약신청")
 @RestController
 @RequestMapping("/api/reservations")
@@ -35,6 +36,7 @@ public class UserReservationController {
     // ---------------------------------------------------------------------
     // 1) 예약 등록 — 폼 입력, 로그인ID를 memberId로 강제 주입
     // ---------------------------------------------------------------------
+    @CrossOrigin("*") // [251002] 프론트엔드 Http 허용
     @Operation(summary = "예약 등록", description = "폼 입력, 신청자ID는 로그인ID로 자동 설정")
     @PostMapping(consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE) // 폼 전송 고정
     public ApiResponse<Long> createReservation(
@@ -107,6 +109,7 @@ public class UserReservationController {
     // ---------------------------------------------------------------------
     // 2) 예약 목록 — 본인 자동 식별(입력값 없으면 본인 전체가 조회되도록 강제)
     // ---------------------------------------------------------------------
+    @CrossOrigin("*") // [251002] 프론트엔드 Http 허용
     @Operation(summary = "예약 목록", description = "예약ID/시설ID로 검색(항상 로그인한 본인 데이터만 조회)")
     @GetMapping
     public ApiResponse<List<ReservationResponse>> listReservation(
@@ -152,6 +155,7 @@ public class UserReservationController {
     // ---------------------------------------------------------------------
     // 3) 예약 취소신청 — 상태값 변경 없이 resv_cancel만 요청(Y)
     // ---------------------------------------------------------------------
+    @CrossOrigin("*") // [251002] 프론트엔드 Http 허용
     @Operation(summary = "취소신청", description = "사용자 취소 요청을 접수(resv_cancel=Y). 상태값은 변경하지 않음.")
     @PostMapping(value = "/{resvId}/cancel-request", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ApiResponse<String> requestCancel(
@@ -166,11 +170,13 @@ public class UserReservationController {
         Authentication auth
     ) {
         final String loginId = auth.getName();
-        reservationService.requestReservationCancel(resvId, loginId, resvCancelReason);
+        
+        // [251005][신청취소 처리] 기존 서비스 호출 개선
+        // reservationService.requestReservationCancel(resvId, loginId, resvCancelReason); // [old]
+        reservationService.requestReservationCancel(resvId, loginId, resvCancelReason); // [251005] 로그인ID와 PK를 기반으로 resv_cancel='Y' 처리
+        
         return ApiResponse.ok("취소신청이 접수되었습니다.");
     }
-
-
 
     /* ===================== [old] 예약 수정 엔드포인트 =====================
     // @Operation(summary = "예약 수정(본인 자동 식별)", description = "로그인한 회원의 예약만 수정됩니다.")
@@ -178,4 +184,12 @@ public class UserReservationController {
     // public String updateReservation(...) { ... }
     // ※ 사용자 화면에서는 상태값 변경 금지 및 수정 제거 요구에 따라 비활성화
     ======================================================================= */
+    
+    // [251002 신규] 예약 단건 조회
+    @Operation(summary = "예약 단건 조회", description = "예약PK로 단건 조회")
+    @GetMapping("/{resvId}")
+    public ApiResponse<ReservationResponse> getReservation(
+            @PathVariable("resvId") Long resvId) {
+        return ApiResponse.ok(reservationService.getReservation(resvId));
+    }
 }

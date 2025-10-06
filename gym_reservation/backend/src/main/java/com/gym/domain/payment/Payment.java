@@ -25,5 +25,6 @@ public class Payment {
     private String paymentMethod;		// 결제수단 VARCHAR2 NOT NULL('계좌'/'카드') → payment_tbl.payment_method
     private String paymentStatus;		// 결제상태 VARCHAR2 NOT NULL('완료','예약','취소') → payment_tbl.payment_status
     private LocalDateTime paymentDate;	// 결제일시 DATE DEFAULT SYSDATE → payment_tbl.payment_date
+    private Integer cardInstallment;	// [251004추가사항] 0=일시불, 2~6개월 + 12개월 할부
 }
 

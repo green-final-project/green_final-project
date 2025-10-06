@@ -1,79 +1,118 @@
+// [1] 패키지 및 import
 package com.gym.controller;
 
-import com.gym.security.NewJwtTokenProvider; // JWT 토큰 발급/검증 유틸 클래스
-import com.gym.security.mapper.LoginQueryMapper; // DB에서 회원 정보/권한을 조회하는 매퍼
+import com.gym.security.NewJwtTokenProvider; // [1-1] JWT 토큰 발급/검증
+import com.gym.security.mapper.LoginQueryMapper; // [1-2] 회원 로그인 전용 매퍼
+import com.gym.domain.member.Member; // [1-3] member_tbl과 매핑된 DTO
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-import org.springframework.http.ResponseEntity; // HTTP 응답을 만들 때 사용하는 클래스
-import org.springframework.security.crypto.password.PasswordEncoder; // 비밀번호 해시 검증용(BCrypt)
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
 
 @Tag(name = "00.로그인", description = "로그인 후, 발행되는 토큰을 상단 Authorize에 입력")
-@RestController // REST API 컨트롤러임을 표시
-@RequestMapping("/sign-api") // 이 컨트롤러의 기본 URL 경로(prefix)
+@RestController
+@RequestMapping("/sign-api")
+@CrossOrigin("*") // [1-4] CORS 허용
 public class SignController {
 
-    private final LoginQueryMapper loginQueryMapper; // 회원 아이디/비밀번호/권한 조회 담당
-    private final PasswordEncoder passwordEncoder; // 비밀번호를 BCrypt 방식으로 비교
-    private final NewJwtTokenProvider jwt; // JWT 토큰 발급기
+    private final LoginQueryMapper loginQueryMapper; // [2-1] 로그인 쿼리 매퍼
+    private final PasswordEncoder passwordEncoder;   // [2-2] 비밀번호 검증기(BCrypt)
+    private final NewJwtTokenProvider jwt;           // [2-3] JWT 토큰 제공자
 
     public SignController(LoginQueryMapper loginQueryMapper,
                           PasswordEncoder passwordEncoder,
-                          NewJwtTokenProvider jwt) { // 생성자 주입
+                          NewJwtTokenProvider jwt) {
         this.loginQueryMapper = loginQueryMapper;
         this.passwordEncoder = passwordEncoder;
         this.jwt = jwt;
     }
 
-    @Operation(
-	        summary = "로그인 토큰 테스트",
-	        description = "계정 ID 및 패스워드 입력 후 발행되는 토큰 확인 목적"
-	)
-    @PostMapping("/sign-in") // POST /sign-api/sign-in 호출 시 실행
-    public ResponseEntity<?> signIn(@RequestParam("userId") String userId, // 요청 파라미터 userId
-                                    @RequestParam("password") String password) { // 요청 파라미터 password
-        var row = loginQueryMapper.findUser(userId); // DB에서 해당 회원 아이디 조회
-        if (row == null) { return ResponseEntity.status(400).body(Map.of("code","400","message","회원 없음")); } // 회원 없음
+    @Operation(summary = "로그인", description = "아이디/비밀번호 확인 후 토큰과 전체 회원정보 반환")
+    @PostMapping("/sign-in")
+    public ResponseEntity<?> signIn(@RequestParam("userId") String userId,
+                                    @RequestParam("password") String password) {
+        // [3-1] DB에서 userId로 회원 조회
+        var row = loginQueryMapper.findUser(userId);
+        if (row == null) {
+            return ResponseEntity.status(400).body(Map.of("code","400","message","회원 없음"));
+        }
 
-        String dbPw = row.getPasswordHash(); // DB 저장 비밀번호(해시 또는 평문)
-        boolean ok = false; // 비밀번호 일치 여부
-        if (dbPw != null && dbPw.length() >= 60) { ok = passwordEncoder.matches(password, dbPw); } // 해시면 matches
-        else { ok = password.equals(dbPw); } // 평문이면 equals(이행기간 임시 허용)
+        // [3-2] 비밀번호 검증 (BCrypt 해시 또는 평문)
+        String dbPw = row.getPasswordHash();
+        boolean ok = (dbPw != null && dbPw.length() >= 60)
+                ? passwordEncoder.matches(password, dbPw)
+                : password.equals(dbPw);
+        if (!ok) {
+            return ResponseEntity.status(401).body(Map.of("code","401","message","비밀번호 불일치"));
+        }
 
-        if (!ok) { return ResponseEntity.status(401).body(Map.of("code","401","message","비밀번호 불일치")); } // 불일치 시 401
+        // [3-3] 권한 조회 후 ROLE 변환
+        List<String> rawRoles = loginQueryMapper.findRoles(userId);
+        List<String> secuRoles = rawRoles.stream().map(this::toSecRole).toList();
 
-        List<String> rawRoles = loginQueryMapper.findRoles(userId); // 회원 권한 조회
-        List<String> secuRoles = rawRoles.stream().map(this::toSecRole).toList(); // 권한 변환
+        // [3-4] JWT 토큰 발급
+        String token = jwt.createToken(userId, secuRoles);
 
-        String token = jwt.createToken(userId, secuRoles); // 토큰 발급
-
-        return ResponseEntity.ok() // 응답 반환
-                .header("X-AUTH-TOKEN", token) // 응답 헤더에 토큰 추가
-                .body(Map.of("userId", userId, "roles", secuRoles, "token", token)); // JSON 응답에 토큰 포함
+        // [3-5⚠️] 회원 전체 정보 조회 [250930]
+        // ⚠️ old: 원래는 userId/roles/token만 반환했음
+		    /*
+		    return ResponseEntity.ok()
+		            .header("X-AUTH-TOKEN", token)
+		            .body(Map.of("userId", userId, "roles", secuRoles, "token", token));
+		    */
+        // Member member = loginQueryMapper.selectMemberById(userId); //⚠️ old: 결과적으로 회원 전체 정보 조회 후 user + token 반환했음
+        
+        // ------------------------------------------- ⚠️ [251006] 관리자 전용 필터 (CMS 로그인용) -------------------------------------------
+        Member member = loginQueryMapper.selectMemberById(userId); // 로그인한 회원의 정보 조회 실행
+        if (member == null) {	// 회원 값이 DB에 존재하지 않을 경우
+            return ResponseEntity.status(404).body(Map.of( // 404에러 발생(회원 데이터가 없을 경우) 
+            		"code","404", // 응답 코드
+            		"message","회원 데이터 없음"	// 응답 메시지
+            ));
+        }
+        String requestPath = "";  // 현재 요청 경로(request URI)를 확인하기
+        try {
+        	// RequestContextHolder를 통해 현재 요청 정보를 가져옴
+            requestPath = java.util.Optional.ofNullable(
+                org.springframework.web.context.request.RequestContextHolder 
+                    .getRequestAttributes()
+            )
+            // ServletRequestAttributes로 캐스팅 후 실제 요청 URI 추출
+            .map(attr -> ((org.springframework.web.context.request.ServletRequestAttributes) attr).getRequest().getRequestURI())
+            .orElse("");
+        // 예외 또는 null일 경우 빈 문자열로 대체
+        } catch (Exception ignore) {}
+    
+        // CMS 경로 요청일 때만 관리자 필터 실행
+        if (requestPath.startsWith("/cms") && ("user".equalsIgnoreCase(member.getMemberRole()))) {
+            return ResponseEntity.status(403).body(Map.of( // 403에러 발생(권한이 없을 경우)
+            		"code","403",
+            		"message","관리자 전용 계정만 로그인 가능합니다."
+            ));
+        }
+        // ------------------------------------------------------------------------------------------------------------------------------
+        
+        // [3-6] 응답 반환 : 토큰 + 전체 회원 정보
+        return ResponseEntity.ok(Map.of(
+                "user", member,
+                "token", token
+        ));
     }
 
+    // [4] 원본 권한값을 Spring Security ROLE로 변환
     private String toSecRole(String raw) {
         return switch (raw) {
-            case "admin","관리자","최고관리자","담당자" -> "ROLE_ADMIN"; // 관리자 계열은 ROLE_ADMIN
-            case "user","회원" -> "ROLE_USER"; // 일반 회원은 ROLE_USER
-            default -> "ROLE_USER"; // 알 수 없는 값은 기본 ROLE_USER
+            //case "admin","관리자","최고관리자","담당자" -> "ROLE_ADMIN"; // old
+            case "admin","관리자","책임자","강사" -> "ROLE_ADMIN"; // new
+            case "user","회원" -> "ROLE_USER";
+            default -> "ROLE_USER";
         };
     }
-    
-    // 비밀번호 암호화
-    // [250917] 암호화 테스트는 완료되었음으로 주석처리
-    /*@Operation(
-	        summary = "비밀번호 암호화",
-	        description = "쿼리 파라미터 raw에 전달한 문자열을 BCrypt 알고리즘으로 암호화하여 반환."
-	)
-    @GetMapping("/_bcrypt") // GET /sign-api/_bcrypt?raw=1234  // 작업 끝나면 삭제
-    public ResponseEntity<String> bcrypt(@RequestParam("raw") String raw) { // 평문 비번(raw)을 해시로 변환
-        return ResponseEntity.ok(passwordEncoder.encode(raw)); // BCrypt 해시 문자열 그대로 반환
-    }*/
-
 }
+

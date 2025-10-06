@@ -19,6 +19,7 @@ import org.springframework.jdbc.core.JdbcTemplate;               // 보조 조�
 
 import java.util.*;
 
+@CrossOrigin("*")
 @Tag(name = "12.PayLog", description = "결제로그 API (단순로그 조회)")
 @RestController
 @RequestMapping("/api")
@@ -36,6 +37,7 @@ public class UserPaylogController {
     //    • 일반   → 로그인ID의 결제로그
     // - 서비스/매퍼는 paymentId별 조회 그대로 재사용
     // ─────────────────────────────────────────────────────────────
+    @CrossOrigin("*")
     @Operation(summary = "결제로그 조회", description = "memberId 미입력 시: 관리자=전체, 일반=본인 로그를 반환합니다.")
     @GetMapping("/payments/logs")
     public ApiResponse<List<PaylogResponse>> listLogs(

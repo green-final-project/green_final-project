@@ -48,7 +48,9 @@ public class SecurityConfig {
                 "/swagger-resources/**",
                 "/webjars/**",
                 "/sign-api/exception",
-                "/__authprobe");
+                "/__authprobe"
+        		//,"/api/membersTEMP/me" //250929회원정보 리엑트 연동을 위한 임시 테스트
+        		);
     }
 
     // [추가] JWT 토큰 유틸 주입자
@@ -75,6 +77,11 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable()) // 개발 초기 임시: CSRF 비활성(운영 전 복구)
             .authorizeHttpRequests(auth -> auth
 
+            		
+            		/* ========= 250929 회원정보 리엑트 연동 테스트  ========= */
+            		.requestMatchers(HttpMethod.GET, "/api/membersTEMP/test").permitAll()
+            		/* ========= 250929 회원정보 리엑트 연동 테스트  ========= */
+            		
             	    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()   // ← 프리플라이트 허용(최상단)
 
             	    /* ========= 무인증 공개 영역(permitAll) ========= */
@@ -116,6 +123,8 @@ public class SecurityConfig {
             	    /* =========================== 카드 권한 분리 =========================== */
 
             	    /* ============================= CMS 관리 =========================== */
+            	    // 통계정보
+            	    .requestMatchers("/api/cms/stats").hasAnyRole("ADMIN")
             	    // 계좌
             	    .requestMatchers("/api/cms/accounts/**").hasAnyAuthority("관리자","책임자","ROLE_ADMIN","admin")
             	    // 카드
@@ -172,9 +181,16 @@ public class SecurityConfig {
             	    /* ====================== 회원(사용자) API ====================== */
 	            	// 회원가입(등록): 비로그인 허용 — 입력폼(application/x-www-form-urlencoded)으로 구현 예정
 	            	.requestMatchers(HttpMethod.POST, "/api/members").permitAll()
+	            	
 	            	// 사용자 단건조회/수정: 로그인 필요(본인 확인은 컨트롤러/서비스에서 비밀번호로 재검증)
-	            	.requestMatchers(HttpMethod.GET,  "/api/members/*").authenticated()
-	            	.requestMatchers(HttpMethod.PUT,  "/api/members/*").authenticated()
+	            	//.requestMatchers(HttpMethod.GET,  "/api/members/*").authenticated()
+	            	//.requestMatchers(HttpMethod.PUT,  "/api/members/*").authenticated()
+	            	.requestMatchers(HttpMethod.GET,  "/api/members/me").authenticated()
+	            	.requestMatchers(HttpMethod.PUT,  "/api/members/me").authenticated()
+	            	
+	            	// 테스트
+	            	// .requestMatchers(HttpMethod.GET,  "/api/members/*").permitAll() // [250929]임시로 회원조회가 리엑트와 연동되는지 테스트하려고 전체허용함
+
 	            	// 사용자 '목록/삭제'는 사용자 컨트롤러에선 제공하지 않으므로 차단(혹시 유입되어도 방어)
 	            	.requestMatchers(HttpMethod.GET,    "/api/members").denyAll()
 	            	.requestMatchers(HttpMethod.DELETE, "/api/members/*").denyAll()
@@ -194,8 +210,9 @@ public class SecurityConfig {
             	    
             	    
             	    /* ========= 로그인 사용자(일반회원 이상) ========= */
-            	    .requestMatchers(
-            	        "/api/members/*",    // 내 정보 조회/수정/삭제 → [GET/PUT/DELETE]
+            	    
+	            	.requestMatchers(
+            	    //    "/api/members/*",    // 내 정보 조회/수정/삭제 → [GET/PUT/DELETE]
             	        "/api/reservations/**",   // 예약 신청/변경/조회/삭제 → [POST/PUT/GET/DELETE]
             	        "/api/boards/*/posts",    // 게시글 등록 → [POST]
             	        "/api/boards/*/posts/*",  // 게시글 수정/삭제 → [PUT/DELETE]

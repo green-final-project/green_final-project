@@ -21,6 +21,7 @@ import java.util.List;
  * - 경로/메서드/파라미터/반환: 사용자 표와 1:1 일치
  * - [250917] 등록/대표설정/삭제는 로그인 본인 소유만 허용
  */
+@CrossOrigin("*")
 @Tag(name = "06.Card-User", description = "카드 API (등록/목록/대표설정/삭제)")
 @RestController
 @RequiredArgsConstructor
@@ -41,6 +42,7 @@ public class UserCardController {
     }
     */
     // 1) 등록(POST /api/cards) — 입력폼(form-urlencoded) + 본인 계정 고정
+    @CrossOrigin("*")
     @Operation(summary = "카드 등록", description = "card_tbl INSERT (폼 입력, 작성자ID는 로그인ID로 자동 설정)")
     @PostMapping(value = "/api/cards", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ApiResponse<Long> createCard(
@@ -139,6 +141,7 @@ public class UserCardController {
 
 
     /** 2) 회원별 목록(GET /api/members/{memberId}/cards) — List<CardResponse> */
+    @CrossOrigin("*")
     @Operation(summary = "카드 목록", description = "memberId 기준 SELECT")
     @GetMapping("/api/members/{memberId}/cards")
     // [old]
@@ -173,6 +176,7 @@ public class UserCardController {
     */
     // [250917] 본인 카드만 대표로 설정 가능
     // 3) 대표카드 설정(PATCH /api/cards/{cardId}/main) — 본인만 가능
+    @CrossOrigin("*")
     @Operation(summary = "대표카드 설정", description = "대상만 'Y', 나머지 자동 'N' (본인만 가능)")
     @PatchMapping("/api/cards/{cardId}/main")
     public ApiResponse<Void> setMainCard(
@@ -195,6 +199,7 @@ public class UserCardController {
 
 
     /** 4) 삭제(DELETE /api/cards/{cardId}) — void */
+    @CrossOrigin("*")
     @Operation(summary = "카드 삭제", description = "PK로 단건 삭제(트리거/참조 제약 주의)")
     @DeleteMapping("/api/cards/{cardId}")
     // [old]

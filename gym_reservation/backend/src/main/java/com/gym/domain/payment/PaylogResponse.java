@@ -66,5 +66,8 @@ public class PaylogResponse {
 
     // 로그 시각 (DATE, NOT NULL, DEFAULT SYSDATE) → paylog_tbl.paylog_date
     private LocalDateTime paylogDate;	// 로그 발생 시각
+    
+    //[251004 추가] 카드 결제 시 할부 개월 (0=일시불, 2~12)
+    private Integer cardInstallment; 
 }
 

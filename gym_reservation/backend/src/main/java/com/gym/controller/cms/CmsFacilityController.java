@@ -240,7 +240,7 @@ public class CmsFacilityController {
         if (page < 0) page = 0;
         if (size <= 0) size = 10;
 
-        PageResponse<FacilityResponse> pr = facilityService.searchFacilities(name, facilityUse, page, size, null);
+        PageResponse<FacilityResponse> pr = facilityService.searchFacilities(name, facilityUse, page, size, null, null); // 카테고리항목(일단, 안쓰니까 null로 설정)추가
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("items", pr.getItems());

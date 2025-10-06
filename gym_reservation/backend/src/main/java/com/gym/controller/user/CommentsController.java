@@ -53,7 +53,8 @@ public class CommentsController {
             if (r == null) continue;
             String up = r.toUpperCase();
             // 프로젝트 내 권한 문자열을 폭넓게 수용(ROLE_ADMIN / 관리자 / 최고관리자)
-            if (up.contains("ADMIN") || r.contains("관리자") || r.contains("최고관리자")) {
+            //if (up.contains("ADMIN") || r.contains("관리자") || r.contains("최고관리자")) {
+            if (up.contains("ADMIN") || r.contains("관리자") || r.contains("책임자")) { // [251002]
                 return true;
             }
         }

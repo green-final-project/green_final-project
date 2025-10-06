@@ -15,6 +15,7 @@ import java.util.List;
  * - 시설ID/조회기간 모두 선택사항
  * - 값이 없으면 전체 조회
  */
+@CrossOrigin("*")
 @RestController
 @RequestMapping("/api/closed-days")
 @Tag(name = "08.ClosedDay-User", description = "휴무일 조회 API")

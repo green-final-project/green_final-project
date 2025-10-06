@@ -17,6 +17,7 @@ import org.springframework.security.access.AccessDeniedException; // [접근차�
 import java.util.List; // 목록 타입
 
 // 계좌 API (등록/목록/대표지정/삭제)
+@CrossOrigin("*")
 @Tag(name = "05.Account-User", description = "계좌 API (등록/목록/대표지정/삭제)")
 @RestController
 @RequiredArgsConstructor
@@ -40,6 +41,7 @@ public class UserAccountController {
      * - 작성자ID는 로그인ID로 자동 설정
      * - 중복계좌 입력하면 메시지 출력
      */
+    @CrossOrigin("*")
     @Operation(
     	    summary = "계좌 등록",
     	    description = "account_tbl INSERT (계좌정보 등록)"
@@ -135,6 +137,7 @@ public class UserAccountController {
     ======================================================================== */
 
     /** 2) 회원별 목록(GET /api/members/{memberId}/accounts) — 본인만 조회 */
+    @CrossOrigin("*")
     @Operation(summary = "회원별 계좌 목록", description = "본인계좌만 조회 가능")
     @GetMapping("/api/members/{memberId}/accounts")
     public ApiResponse<List<AccountResponse>> listByMember(
@@ -163,6 +166,7 @@ public class UserAccountController {
     /**
      * 3) 대표계좌 설정(PATCH /api/accounts/{accountId}/main) — 본인만
      */
+    @CrossOrigin("*")
     @Operation(summary = "대표계좌 설정", description = "대상만 'Y', 나머지 자동 'N'")
     @PatchMapping("/api/accounts/{accountId}/main")
     public ApiResponse<Void> setMainAccount(
@@ -195,6 +199,7 @@ public class UserAccountController {
     ========================================================================== */
 
     /** 4) 삭제(DELETE /api/accounts/{accountId}) — 본인 소유만 삭제 가능 */
+    @CrossOrigin("*")
     @Operation(summary = "계좌 삭제", description = "계좌ID 입력한 단건 삭제")
     @DeleteMapping("/api/accounts/{accountId}")
     public ApiResponse<Void> deleteAccountById(

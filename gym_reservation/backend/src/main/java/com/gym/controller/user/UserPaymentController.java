@@ -27,6 +27,7 @@ import java.util.List;
  * - 보안: 비로그인 접근 불가(스프링 시큐리티 전제)
  * - 통일성: 폼→DTO는 req.set… 스타일로 일관 유지(시설 CMS 컨트롤러와 동일)
  */
+@CrossOrigin("*")
 @Tag(name = "12.Payment-User", description = "사용자 결제 신청/조회")
 @RestController
 @RequestMapping("/api/payments")
@@ -42,6 +43,7 @@ public class UserPaymentController {
        - 타인 예약ID 결제 시도 차단(소유자 검증)
        - TIMESTAMP 차이(일 단위) × 24 → 시간 환산 후 시설 단가와 곱셈
        ---------------------------------------------------------------------*/
+    @CrossOrigin("*")
     @Operation(summary = "결제 신청(폼)",
             description = "예약ID와 결제수단(계좌/카드)을 입력하면 서버가 결제금액을 계산해 등록합니다.")
     @PostMapping(consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
@@ -59,6 +61,9 @@ public class UserPaymentController {
 
             @Parameter(description = "카드ID(수단이 '카드'일 때만)", schema = @Schema(type="long"))
             @RequestParam(name = "cardId", required = false) Long cardId,
+            
+            // ⚠️ [251004 추가] 카드 할부 개월수 (일시불=0)
+            @RequestParam(name = "cardInstallment", defaultValue = "0") Integer cardInstallment,
 
             Authentication auth   // 로그인 사용자(본인만 결제 가능)
     ) {
@@ -147,7 +152,8 @@ public class UserPaymentController {
         req.setCardId(cardId);               // 카드ID(선택)
         req.setPaymentMoney(paymentMoney);   // ★ 서버 계산 금액
         // 상태값은 매퍼에서 NVL로 '예약' 보정(파라미터 null이면 '예약' 저장) — 매퍼 구조 준수
-
+        req.setCardInstallment(cardInstallment); // ⚠️[251004] 카드 할부 추가
+        
         // 4) 서비스 호출(INSERT → 시퀀스 CURRVAL 회수)
         log.info("[USER][POST]/api/payments form req={}", req);
         Long paymentId = paymentService.create(req);
@@ -158,6 +164,7 @@ public class UserPaymentController {
     // ---------------------------------------------------------------------
     // 2) 결제 목록(본인 강제) — 미입력 시 본인 전체
     // ---------------------------------------------------------------------
+    @CrossOrigin("*")
     @Operation(summary = "결제 목록(본인)", description = "로그인한 본인의 결제만 조회합니다.")
     @GetMapping
     public ApiResponse<List<PaymentResponse>> listForUser(
@@ -181,6 +188,7 @@ public class UserPaymentController {
     // ---------------------------------------------------------------------
     // 3) 결제 단건(본인 강제) — paymentId로 1건 필터링
     // ---------------------------------------------------------------------
+    @CrossOrigin("*")
     @Operation(summary = "결제 단건(본인)", description = "결제ID로 본인 결제를 단건 조회합니다.")
     @GetMapping("/{paymentId}")
     public ApiResponse<PaymentResponse> getOneForUser(
@@ -196,4 +204,42 @@ public class UserPaymentController {
         if (list.isEmpty()) throw new IllegalArgumentException("조회 결과가 없습니다.");
         return ApiResponse.ok(list.get(0));
     }
+    
+	 // ---------------------------------------------------------------------
+	 // 4) 결제 취소(본인 강제) — paymentId 기준으로 결제상태='취소' 처리
+	 // ---------------------------------------------------------------------
+	 @CrossOrigin("*")
+	 @Operation(summary = "결제 취소", description = "결제ID를 받아 결제상태를 '취소'로 변경합니다. 본인 결제만 가능.")
+	 @PostMapping("/{paymentId}/cancel")
+	 public ApiResponse<String> cancelPayment(
+	         @PathVariable("paymentId") Long paymentId,
+	         Authentication auth
+	 ) {
+	     final String loginId = auth.getName();
+	
+	     // 1) 본인 결제건인지 확인
+	     final String ownerSql = "SELECT member_id FROM payment_tbl WHERE payment_id = ?";
+	     String ownerId = jdbc.queryForObject(ownerSql, String.class, paymentId);
+	     if (!loginId.equals(ownerId)) {
+	         throw new IllegalStateException("본인 결제건만 취소할 수 있습니다.");
+	     }
+	
+	     // 2) 이미 취소된 결제면 중복 방지
+	     final String statusSql = "SELECT payment_status FROM payment_tbl WHERE payment_id = ?";
+	     String currentStatus = jdbc.queryForObject(statusSql, String.class, paymentId);
+	     if ("취소".equals(currentStatus)) {
+	         throw new IllegalStateException("이미 취소된 결제건입니다.");
+	     }
+	
+	     // 3) 결제상태를 '취소'로 업데이트
+	     final String updateSql = "UPDATE payment_tbl SET payment_status='취소' WHERE payment_id=?";
+	     int updated = jdbc.update(updateSql, paymentId);
+	     if (updated == 0) {
+	         throw new IllegalStateException("결제 취소에 실패했습니다.");
+	     }
+	
+	     log.info("[USER][POST]/api/payments/{}/cancel by {}", paymentId, loginId);
+	     return ApiResponse.ok("결제 취소 완료");
+	 }
+
 }

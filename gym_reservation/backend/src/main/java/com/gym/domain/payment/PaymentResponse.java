@@ -1,4 +1,4 @@
-package com.gym.domain.payment;   // 결제 도메인 패키지
+package com.gym.domain.payment;
 
 import lombok.*;
 import java.time.LocalDateTime;
@@ -24,4 +24,5 @@ public class PaymentResponse {
     private String paymentMethod;		// 결제수단 VARCHAR2 → payment_tbl.payment_method
     private String paymentStatus;		// 결제상태 VARCHAR2 → payment_tbl.payment_status
     private LocalDateTime paymentDate;	// 결제일시 DATE → payment_tbl.payment_date
+    private Integer cardInstallment;	// [251004추가사항] 0=일시불, 2~6개월 + 12개월 할부
 }

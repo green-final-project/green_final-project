@@ -45,62 +45,85 @@ public class UserMemberController {
     // ============================================================
     // 회원 등록
     // ============================================================
+    @CrossOrigin("*") // [250929] 클라이언트와 연동하는 목적 (*로 하면, 모든 클라이언트와 접속이 됨) 
     @Operation(summary = "회원 등록", description = "member_tbl INSERT (폼 입력, application/x-www-form-urlencoded)")
     @PostMapping(consumes = "application/x-www-form-urlencoded")
     public ApiResponse<Integer> createMember(
-            @Parameter(description = "회원ID(필수)") @RequestParam String memberId,
-            @Parameter(description = "비밀번호(필수)") @RequestParam String memberPw,
-            @Parameter(description = "회원이름(필수)") @RequestParam String memberName,
-            @Parameter(description = "성별(필수)", schema = @io.swagger.v3.oas.annotations.media.Schema(allowableValues = {"m", "f"}))
-            @RequestParam String memberGender,
-            @Parameter(description = "이메일(필수)") @RequestParam String memberEmail,
-            @Parameter(description = "휴대폰(필수)") @RequestParam String memberMobile,
-            @Parameter(description = "생년월일(필수, YYYY-MM-DD)") @RequestParam String memberBirthday,
-            @Parameter(description = "우편번호(선택, 5자리)") @RequestParam(required = false) String zip,
-            @Parameter(description = "전화번호(선택)") @RequestParam(required = false) String memberPhone,
-            @Parameter(description = "도로명주소(선택)") @RequestParam(required = false) String roadAddress,
-            @Parameter(description = "지번주소(선택)") @RequestParam(required = false) String jibunAddress,
-            @Parameter(description = "상세주소(선택)") @RequestParam(required = false) String detailAddress
+    		
+    		// [250930] @RequestParam("")로 바꿔야 함
+    		
+    		@Parameter(description = "회원ID(필수)") @RequestParam("memberId") String memberId,
+            @Parameter(description = "비밀번호(필수)") @RequestParam("memberPw") String memberPw,
+            @Parameter(description = "회원이름(필수)") @RequestParam("memberName") String memberName,
+            @Parameter(description = "성별(필수)", 
+            		   schema = @io.swagger.v3.oas.annotations.media.Schema(allowableValues = {"m", "f"}))
+            		   @RequestParam ("memberGender") String memberGender,
+            @Parameter(description = "이메일(필수)") @RequestParam("memberEmail") String memberEmail,
+            @Parameter(description = "휴대폰(필수)") @RequestParam("memberMobile") String memberMobile,
+            @Parameter(description = "생년월일(필수, YYYY-MM-DD)") @RequestParam("memberBirthday") String memberBirthday,
+            @Parameter(description = "우편번호(선택, 5자리)") @RequestParam(value="zip", required = false) String zip,
+            @Parameter(description = "전화번호(선택)") @RequestParam(value="memberPhone", required = false) String memberPhone,
+            @Parameter(description = "도로명주소(선택)") @RequestParam(value="roadAddress",required = false) String roadAddress,
+            @Parameter(description = "지번주소(선택)") @RequestParam(value="jibunAddress", required = false) String jibunAddress,
+            @Parameter(description = "상세주소(선택)") @RequestParam(value="detailAddress", required = false) String detailAddress
+            
+    		
+            // [250929] 로그인 토큰 (리엑트 연동 순단)
+            //,@Parameter(description = "로그인 성공 후 발급 받은 access_token") 
+            // @RequestHeader(value = "x-auth-token", required = true) String xAuthToken 테스트가 아닌 이상, 토큰 필요 없음
+
     ) {
         log.info("[POST]/api/members req memberId={}", memberId);
+        
+        // [250929] 토큰 로그
+        //log.info("JWT token:{}", xAuthToken);
 
-        Member req = new Member();
-        req.setMemberId(memberId);
-        req.setMemberPw(bCryptPasswordEncoder.encode(memberPw)); // [비번암호화] 신규 등록 시 BCrypt로 해시 저장
-        req.setMemberName(memberName);
-        req.setMemberGender(memberGender);
-        req.setMemberEmail(memberEmail);
-        req.setMemberMobile(memberMobile);
-        req.setMemberPhone(memberPhone);
-        req.setRoadAddress(roadAddress);
-        req.setJibunAddress(jibunAddress);
-        req.setDetailAddress(detailAddress);
-
+        // [250930] req->member로 바꿨음
+        Member member = new Member();
+        member.setMemberId(memberId);
+        member.setMemberPw(bCryptPasswordEncoder.encode(memberPw)); // [비번암호화] 신규 등록 시 BCrypt로 해시 저장
+        member.setMemberName(memberName);
+        member.setMemberGender(memberGender);
+        member.setMemberEmail(memberEmail);
+        member.setMemberMobile(memberMobile);
+        member.setMemberPhone(memberPhone);
+        member.setRoadAddress(roadAddress);
+        member.setJibunAddress(jibunAddress);
+        member.setDetailAddress(detailAddress);
+        log.info("회원정보:{}", member);
+        
         // 생년월일 파싱
-        try {
-            LocalDate birthday = LocalDate.parse(memberBirthday, DateTimeFormatter.ISO_DATE); // [형식검증]
-            req.setMemberBirthday(birthday);
-        } catch (DateTimeParseException ex) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "memberBirthday는 YYYY-MM-DD 형식이어야 합니다.");
+        if (memberBirthday != null) { // 250930 생년월일 null값일 경우를 위한 조건문 추가
+	        try {
+	            LocalDate birthday = LocalDate.parse(memberBirthday, DateTimeFormatter.ISO_DATE); // [형식검증]
+	            member.setMemberBirthday(birthday);
+	        } catch (DateTimeParseException ex) {
+	            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "memberBirthday는 YYYY-MM-DD 형식이어야 합니다.");
+        	} 
+        } else {
+    		throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "생년월일 항목 확인 부탁드립니다.");
         }
-
+        
         // ZIP 보정
         String zipFix = (zip == null || zip.isBlank() || "string".equalsIgnoreCase(zip)) ? null : zip; // [값보정]
         if (zipFix != null && zipFix.length() > 5) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "우편번호는 최대 5자리까지 입력 가능합니다."); // [형식검증]
         }
-        req.setZip(zipFix);
+        member.setZip(zipFix);
 
         // 회원권한 자동 user
-        req.setMemberRole("user"); // [기본값설정]
+        member.setMemberRole("user"); // [기본값설정]
 
-        int affected = memberService.createMember(req); // [DB처리]
+        int affected = memberService.createMember(member); // [DB처리]
         return ApiResponse.ok(affected);
+        
+        //return ApiResponse.ok(1);
     }
 
     // ============================================================
     // 내 회원 정보 조회250928 개선형 (/me)
     // ============================================================
+    @CrossOrigin("*")
     @GetMapping("/me") // ← 동일 경로를 갖는 메서드는 이 하나만 존재해야 함
     @Operation(summary = "내 회원 정보 조회", description = "로그인한 사용자의 토큰 정보를 기반으로 자기 자신의 회원 정보를 조회한다.")
     public ApiResponse<MemberResponse> getMyInfo1(Authentication authentication) {
@@ -146,6 +169,7 @@ public class UserMemberController {
     // ============================================================
     // 내 회원 정보 수정 (/me)
     // ============================================================
+    @CrossOrigin("*")
     @Operation(
         summary = "회원 수정",
         description = "로그인 계정 본인 확인 + 현재 비밀번호 검증 후 수정."
@@ -158,6 +182,7 @@ public class UserMemberController {
             @Parameter(description = "이메일(선택)") @RequestParam(value = "memberEmail",   required = false) String memberEmail,
             @Parameter(description = "휴대폰(선택)") @RequestParam(value = "memberMobile",  required = false) String memberMobile,
             @Parameter(description = "전화번호(선택)") @RequestParam(value = "memberPhone",   required = false) String memberPhone,
+            @Parameter(description = "우편번호(선택)") @RequestParam(value = "zip",   required = false) String zip, //[251005] 상세주소 추가
             @Parameter(description = "도로명주소(선택)") @RequestParam(value = "roadAddress",   required = false) String roadAddress,
             @Parameter(description = "상세주소(선택)") @RequestParam(value = "detailAddress", required = false) String detailAddress
     ) {
@@ -181,24 +206,26 @@ public class UserMemberController {
         memberEmail   = sanitize(memberEmail);    // [값보정]
         memberMobile  = sanitize(memberMobile);   // [값보정]
         memberPhone   = sanitize(memberPhone);    // [값보정]
+        zip			  = sanitize(zip);    		  // [값보정] [251005추가]
         roadAddress   = sanitize(roadAddress);    // [값보정]
         detailAddress = sanitize(detailAddress);  // [값보정]
 
-        Member req = new Member();                // [부분수정] null이 아닌 필드만 Mapper가 업데이트하도록 전달
+        Member member = new Member(); // [부분수정] null이 아닌 필드만 Mapper가 업데이트하도록 전달
 
         if (newPw != null) { // [비번암호화] 새 비번이 오면 해시하여 저장
-            req.setMemberPw(bCryptPasswordEncoder.encode(newPw));
+        	member.setMemberPw(bCryptPasswordEncoder.encode(newPw));
         } else if (!isBCrypt && stored != null) { // [비번암호화-업그레이드] 기존이 평문이면 이번 요청에서 해시 업그레이드
-            req.setMemberPw(bCryptPasswordEncoder.encode(stored));
+        	member.setMemberPw(bCryptPasswordEncoder.encode(stored));
         }
 
-        if (memberEmail   != null) req.setMemberEmail(memberEmail);     // [부분수정-이메일]
-        if (memberMobile  != null) req.setMemberMobile(memberMobile);   // [부분수정-휴대폰]
-        if (memberPhone   != null) req.setMemberPhone(memberPhone);     // [부분수정-전화]
-        if (roadAddress   != null) req.setRoadAddress(roadAddress);     // [부분수정-주소]
-        if (detailAddress != null) req.setDetailAddress(detailAddress); // [부분수정-상세주소]
+        if (memberEmail   != null) member.setMemberEmail(memberEmail);     // [부분수정-이메일]
+        if (memberMobile  != null) member.setMemberMobile(memberMobile);   // [부분수정-휴대폰]
+        if (memberPhone   != null) member.setMemberPhone(memberPhone);     // [부분수정-전화]
+        if (zip 		  != null) member.setZip(zip);					   // [251005추가][부분수정-우편번호]
+        if (roadAddress   != null) member.setRoadAddress(roadAddress);     // [부분수정-주소]
+        if (detailAddress != null) member.setDetailAddress(detailAddress); // [부분수정-상세주소]
 
-        int affected = memberService.updateMember(loginId, req); // [DB처리-업데이트]
+        int affected = memberService.updateMember(loginId, member); // [DB처리-업데이트]
         return ApiResponse.ok(affected); // [응답]
     }
 
