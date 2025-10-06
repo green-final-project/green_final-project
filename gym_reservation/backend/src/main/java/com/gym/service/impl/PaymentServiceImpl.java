@@ -79,6 +79,7 @@ public class PaymentServiceImpl implements PaymentService {
                 .paymentMoney(req.getPaymentMoney())
                 .paymentMethod(req.getPaymentMethod())   // 위에서 보정
                 .paymentStatus(req.getPaymentStatus())   // 위에서 보정
+                .cardInstallment(req.getCardInstallment())   // ⚠️ [251004 추가] 카드 할부개월 매핑
                 .build();
 
         // [4] INSERT 실행 (조건 불일치 시 0 반환)

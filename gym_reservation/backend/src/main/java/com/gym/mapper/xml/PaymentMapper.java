@@ -17,6 +17,7 @@ public interface PaymentMapper {
      * - XML 매퍼: insertPayment
      */
     int insertPayment(@Param("p") Payment p);
+    
 
     /**
      * 마지막으로 발급된 결제 PK값 조회

@@ -28,6 +28,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		this.newJwtTokenProvider = jwtTokenProvider;
 	}
 
+	// 필터 사이클
 	@Override
 	protected void doFilterInternal(HttpServletRequest servletRequest, HttpServletResponse servletResponse,
 			FilterChain filterChain) throws ServletException, IOException {
@@ -40,7 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 		LOGGER.info("[doFilterInternal] token 값 유효성 체크 시작");
 
-//        if (token != null && jwtTokenProvider.validateToken(token)) {
+		// if (token != null && jwtTokenProvider.validateToken(token)) {
 		if (token != null && newJwtTokenProvider.validateToken(token)) {
 
 			// Authentication authentication = jwtTokenProvider.getAuthentication(token);
@@ -50,7 +51,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			LOGGER.info("[doFilterInternal] token 값 유효성 체크 완료");
 		}
 
-		filterChain.doFilter(servletRequest, servletResponse);
+		filterChain.doFilter(servletRequest, servletResponse); //필터 체인지
 	}
 
 	// JwtAuthenticationFilter 내부 (패키지: com.gym.security)

@@ -4,6 +4,9 @@ import com.gym.domain.member.Member;
 import com.gym.mapper.annotation.MemberMapper;
 import com.gym.mapper.xml.MemberQueryMapper;
 import com.gym.service.MemberService;
+
+import lombok.extern.log4j.Log4j2;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +19,7 @@ import java.util.List;
  * - DDL: member_manipay DEFAULT 'account', member_role DEFAULT 'user', member_joindate DEFAULT SYSDATE
  */
 @Service
+@Log4j2 //250930 추가
 public class MemberServiceImpl implements MemberService {
 
     private final MemberMapper memberMapper;
@@ -38,23 +42,46 @@ public class MemberServiceImpl implements MemberService {
     // ➕ 등록
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int createMember(Member req) {
+    public int createMember(Member member) {
         // 기본 검증(성별)
-        if (req.getMemberGender() != null) {
-            String g = req.getMemberGender().trim().toLowerCase();
+        if (member.getMemberGender() != null) {
+            String g = member.getMemberGender().trim().toLowerCase();
             if (!g.equals("m") && !g.equals("f")) {
                 throw new RuntimeException("BAD_REQUEST: memberGender는 'm' 또는 'f'만 허용");
             }
-            req.setMemberGender(g);
+            member.setMemberGender(g);
         }
         // DEFAULT 컬럼 보정(INSERT 컬럼 명시하므로 우리가 안전하게 세팅 — DDL과 동일)
-        if (req.getMemberManipay() == null) req.setMemberManipay("account");
-        if (req.getMemberRole() == null)    req.setMemberRole("user");
+        if (member.getMemberManipay() == null) member.setMemberManipay("account");
+        if (member.getMemberRole() == null)    member.setMemberRole("user");
         // member_joindate 는 DDL DEFAULT SYSDATE 사용 → INSERT 목록에 없음
-
+        
+        // ---------------------- 250930 ---------------------- 
+        // 전화번호 null값 허용
+        String tempPhone = member.getMemberPhone() == null ? "": member.getMemberPhone();
+        member.setMemberPhone(tempPhone);
+        
+        // 상세주소 null값 허용
+        String tempZip = member.getZip() == null ? "": member.getZip();
+        member.setZip(tempZip);
+        
+        String tempRoadAddress = member.getRoadAddress() == null ? "": member.getRoadAddress();
+        member.setRoadAddress(tempRoadAddress);
+        
+        String tempJibunAddress = member.getJibunAddress() == null ? "": member.getJibunAddress();
+        member.setJibunAddress(tempJibunAddress);
+        
+        String tempDetailAddress = member.getDetailAddress() == null ? "": member.getDetailAddress();
+        member.setDetailAddress(tempDetailAddress);
+        
+        
+        log.info("회원등록 서비스:{}", member);
+        // ---------------------- 250930 ---------------------- 
+        
+        
         // INSERT
         try {
-            return memberMapper.insert(req);
+            return memberMapper.insert(member);
         } catch (org.springframework.dao.DuplicateKeyException e) {
             throw new RuntimeException("CONFLICT: PK/이메일/휴대폰 중복");
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
@@ -66,24 +93,24 @@ public class MemberServiceImpl implements MemberService {
     // ✏️ 수정 (memberId, memberName 정책상 수정 금지)
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int updateMember(String memberId, Member req) {
+    public int updateMember(String memberId, Member member) {
         Member target = memberMapper.selectMemberById(memberId);
         if (target == null) throw new RuntimeException("NOT_FOUND: member " + memberId);
 
         // null → 미변경
-        if (req.getMemberPw() != null)        target.setMemberPw(req.getMemberPw());
-        if (req.getMemberGender() != null)    target.setMemberGender(req.getMemberGender().toLowerCase());
-        if (req.getMemberEmail() != null)     target.setMemberEmail(req.getMemberEmail());
-        if (req.getMemberMobile() != null)    target.setMemberMobile(req.getMemberMobile());
-        if (req.getMemberPhone() != null)     target.setMemberPhone(req.getMemberPhone());
-        if (req.getZip() != null)             target.setZip(req.getZip());
-        if (req.getRoadAddress() != null)     target.setRoadAddress(req.getRoadAddress());
-        if (req.getJibunAddress() != null)    target.setJibunAddress(req.getJibunAddress());
-        if (req.getDetailAddress() != null)   target.setDetailAddress(req.getDetailAddress());
-        if (req.getMemberBirthday() != null)  target.setMemberBirthday(req.getMemberBirthday());
-        if (req.getMemberManipay() != null)   target.setMemberManipay(req.getMemberManipay());
-        if (req.getMemberRole() != null)      target.setMemberRole(req.getMemberRole());
-        if (req.getAdminType() != null)       target.setAdminType(req.getAdminType());
+        if (member.getMemberPw() != null)        target.setMemberPw(member.getMemberPw());
+        if (member.getMemberGender() != null)    target.setMemberGender(member.getMemberGender().toLowerCase());
+        if (member.getMemberEmail() != null)     target.setMemberEmail(member.getMemberEmail());
+        if (member.getMemberMobile() != null)    target.setMemberMobile(member.getMemberMobile());
+        if (member.getMemberPhone() != null)     target.setMemberPhone(member.getMemberPhone());
+        if (member.getZip() != null)             target.setZip(member.getZip());
+        if (member.getRoadAddress() != null)     target.setRoadAddress(member.getRoadAddress());
+        if (member.getJibunAddress() != null)    target.setJibunAddress(member.getJibunAddress());
+        if (member.getDetailAddress() != null)   target.setDetailAddress(member.getDetailAddress());
+        if (member.getMemberBirthday() != null)  target.setMemberBirthday(member.getMemberBirthday());
+        if (member.getMemberManipay() != null)   target.setMemberManipay(member.getMemberManipay());
+        if (member.getMemberRole() != null)      target.setMemberRole(member.getMemberRole());
+        if (member.getAdminType() != null)       target.setAdminType(member.getAdminType());
 
         target.setMemberId(memberId);
 

@@ -26,4 +26,8 @@ public interface ReservationService {
 
     // [250919 신규] 취소신청 — resv_cancel='Y' 로만 업데이트 (idempotent)
     int requestReservationCancel(Long resvId, String userId, String resvCancelReason);
+    
+    // [251002 신규] 예약단건조회
+    ReservationResponse getReservation(Long resvId); 
+    // 필요한 이유 : (플로우 구조) 시설정보 조회 후, 예약신청을 진행하는 구조를 구성하기 위해선 단건조회 기능 필요함  
 }

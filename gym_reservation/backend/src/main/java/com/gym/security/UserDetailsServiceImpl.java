@@ -33,7 +33,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     private String toSecurityRole(String raw){
         return switch (raw) {
-            case "admin", "관리자", "최고관리자", "담당자" -> "ROLE_ADMIN"; // CMS권한은 ADMIN으로 통합
+            //case "admin", "관리자", "최고관리자", "담당자" -> "ROLE_ADMIN"; // CMS권한은 ADMIN으로 통합
+        	// 책임자로 변경
+        	case "admin", "관리자", "책임자", "강사" -> "ROLE_ADMIN"; // CMS권한은 ADMIN으로 통합 
             case "user",  "회원" -> "ROLE_USER";
             default -> "ROLE_USER";
         };

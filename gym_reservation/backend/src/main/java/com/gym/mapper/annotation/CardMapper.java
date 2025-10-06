@@ -72,7 +72,7 @@ public interface CardMapper {
             c.card_reg_date  AS cardRegDate
         FROM card_tbl c
         WHERE c.member_id = #{memberId}
-        ORDER BY c.card_id
+        ORDER BY CASE WHEN c.card_main = 'Y' THEN 0 ELSE 1 END, c.card_id
     """)
     @Results(id="CardMap", value = {
         @Result(column="card_main", property="cardMain",

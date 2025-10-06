@@ -35,6 +35,8 @@ public class ReservationServiceImpl implements ReservationService {
     private final JdbcTemplate jdbcTemplate; //[250919] 추가 (부트 자동 구성)
     private final MessageService messageService; // [250925추가] 메시지 서비스 빈 주입(기존 구현체 사용, 새로운 메서드 생성 금지)
     
+    
+    // 예약신청
     @Override
     @Transactional
     public Long createReservation(ReservationCreateRequest request) {
@@ -78,6 +80,19 @@ public class ReservationServiceImpl implements ReservationService {
         return entity.getResvId();
     } 
 
+    /**
+     * [251002 신규] 예약 단건조회
+     * - 입력: resvId(PK)
+     * - 출력: ReservationResponse (단일 예약 상세정보)
+     * - 사용처: 예약 상세확인, 결제단계 연동
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public ReservationResponse getReservation(Long resvId) {
+        return reservationQueryMapper.getReservation(resvId);
+    }
+
+    
     // 검색 조회
     @Override
     @Transactional(readOnly = true)
@@ -107,6 +122,7 @@ public class ReservationServiceImpl implements ReservationService {
         return reservationMapper.updateByIdAndMemberId(patch);
     }
 
+    // 예약정보 삭제하기...이제 안씀
     @Override
     @Transactional
     public int deleteReservationByUser(Long resvId, String userId) {
@@ -149,7 +165,9 @@ public class ReservationServiceImpl implements ReservationService {
 
     	// 2-2) 휴대폰 번호 조회(member_tbl.mobile)
     	String mobile = jdbcTemplate.queryForObject(
-    	        "SELECT m.mobile FROM member_tbl m WHERE m.member_id = ?",
+    	        //"SELECT m.mobile FROM member_tbl m WHERE m.member_id = ?",
+    			//[251005]  m.mobile → m.member_mobile 변경 
+    			"SELECT m.member_mobile FROM member_tbl m WHERE m.member_id = ?",
     	        String.class,   // requiredType 먼저
     	        applicantId     // 가변인자
     	); // 신청자 휴대폰
@@ -166,7 +184,7 @@ public class ReservationServiceImpl implements ReservationService {
             messageService.sendMessage(msg); // ✅ 기존 시그니처 그대로 사용
         }
     }
-
+    
     return updated; // 기존 반환 계약 유지
 }
 

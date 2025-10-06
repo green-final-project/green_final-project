@@ -15,11 +15,13 @@ public interface FacilityQueryMapper {
         @Param("facilityUse") Boolean facilityUse,
         @Param("page") Integer page,
         @Param("size") Integer size,
-        @Param("sort") String sort   // 예: "name,asc" / "regDate,desc"
+        @Param("sort") String sort,   // 예: "name,asc" / "regDate,desc"
+        @Param("type") String type // ⚠️ [251001] 카테고리 필터(type) 추가
     );
 
     long countFacilities(
         @Param("name") String name,
-        @Param("facilityUse") Boolean facilityUse
+        @Param("facilityUse") Boolean facilityUse,
+        @Param("type") String type // ⚠️ [251001] 카테고리 필터(type) 추가
     );
 }

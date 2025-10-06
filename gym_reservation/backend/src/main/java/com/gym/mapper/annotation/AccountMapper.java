@@ -1,9 +1,9 @@
-package com.gym.mapper.annotation;                      // 📦 매퍼 패키지(어노테이션)
+package com.gym.mapper.annotation;
 
-import org.apache.ibatis.annotations.*;                 // 🧩 MyBatis 애노테이션
-import com.gym.domain.account.Account;                  // 🧩 도메인 엔티티
-import com.gym.config.type.BooleanYNTypeHandler;        // 🔄 Y/N ↔ boolean 변환 핸들러
-import java.util.List;                                  // 📚 목록 반환
+import org.apache.ibatis.annotations.*; // MyBatis 애노테이션
+import com.gym.domain.account.Account;	// 도메인 엔티티
+import com.gym.config.type.BooleanYNTypeHandler; // Y/N ↔ boolean 변환 핸들러
+import java.util.List; // 목록 반환
 
 /**
  * AccountMapper: 단건 등록/목록/대표계좌 지정/삭제
@@ -104,7 +104,7 @@ public interface AccountMapper {
             a.account_reg_date AS accountRegDate
         FROM account_tbl a
         WHERE a.member_id = #{memberId}
-        ORDER BY a.account_id
+        ORDER BY CASE WHEN a.account_main = 'Y' THEN 0 ELSE 1 END, a.account_id
     """)
     @Results(id="AccountMap", value = {
         @Result(column="account_main", property="accountMain",

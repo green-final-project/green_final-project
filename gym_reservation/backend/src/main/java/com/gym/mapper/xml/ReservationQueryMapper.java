@@ -30,4 +30,6 @@ public interface ReservationQueryMapper {
     	    @Param("resvEndTime")   LocalDateTime resvEndTime
     	    );
 
+    // [251002 신규] 단건 조회
+    ReservationResponse getReservation(Long resvId);
 }
