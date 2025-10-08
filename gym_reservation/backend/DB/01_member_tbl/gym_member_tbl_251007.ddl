@@ -321,7 +321,64 @@ BEGIN
   END IF;
 END;
 /
+--------------------------------------------------------------------------------
+-- 🔧 [신규 트리거] 회원 주소·연락처 입력값 자동 NULL 보정 (5컬럼 대상)
+-- 목적: zip, member_phone, road_address, jibun_address, detail_address 컬럼이
+--       '', 공백, 'string', 'STRING' 등일 때 NULL로 자동 변환
+-- 적용대상: INSERT, UPDATE 시점
+-- 작성일자: [2025-10-07]
+--------------------------------------------------------------------------------
+BEGIN
+  EXECUTE IMMEDIATE 'DROP TRIGGER trg_member_null_cleanup';
+EXCEPTION
+  WHEN OTHERS THEN
+    IF SQLCODE != -4080 THEN RAISE; END IF;  -- ORA-04080: trigger does not exist → 무시
+END;
+/
+CREATE OR REPLACE TRIGGER trg_member_null_cleanup
+BEFORE INSERT OR UPDATE ON member_tbl
+FOR EACH ROW
+BEGIN
+  -- ✅ zip 보정
+  IF :NEW.zip IS NOT NULL THEN
+    IF TRIM(:NEW.zip) IS NULL OR LOWER(TRIM(:NEW.zip)) = 'string' THEN
+      :NEW.zip := NULL;
+    END IF;
+  END IF;
 
+  -- ✅ member_phone 보정
+  IF :NEW.member_phone IS NOT NULL THEN
+    IF TRIM(:NEW.member_phone) IS NULL OR LOWER(TRIM(:NEW.member_phone)) = 'string' THEN
+      :NEW.member_phone := NULL;
+    END IF;
+  END IF;
+
+  -- ✅ road_address 보정
+  IF :NEW.road_address IS NOT NULL THEN
+    IF TRIM(:NEW.road_address) IS NULL OR LOWER(TRIM(:NEW.road_address)) = 'string' THEN
+      :NEW.road_address := NULL;
+    END IF;
+  END IF;
+
+  -- ✅ jibun_address 보정
+  IF :NEW.jibun_address IS NOT NULL THEN
+    IF TRIM(:NEW.jibun_address) IS NULL OR LOWER(TRIM(:NEW.jibun_address)) = 'string' THEN
+      :NEW.jibun_address := NULL;
+    END IF;
+  END IF;
+
+  -- ✅ detail_address 보정
+  IF :NEW.detail_address IS NOT NULL THEN
+    IF TRIM(:NEW.detail_address) IS NULL OR LOWER(TRIM(:NEW.detail_address)) = 'string' THEN
+      :NEW.detail_address := NULL;
+    END IF;
+  END IF;
+END;
+/
+
+SELECT trigger_name, status, triggering_event, trigger_type
+  FROM user_triggers
+ WHERE trigger_name = 'TRG_MEMBER_NULL_CLEANUP';
 
 --------------------------------------------------------------------------------
 -- 7) 확인 조회
