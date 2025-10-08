@@ -131,7 +131,9 @@
 			<if test="roadAddress != null">road_address = #{roadAddress},</if>
 			<if test="detailAddress != null">detail_address = #{detailAddress},</if>
 		</set>
-		WHERE member_id = #{memberId}
+		<!-- WHERE member_id = #{memberId}-->
+		WHERE member_id = #{memberId, jdbcType=VARCHAR}
+		
 	</update>
 
 	<!-- [250926 수정] 회원 목록 조회 -->
@@ -191,4 +193,18 @@
 		</where>
 	</select>
 
+	<!-- [251008 추가] CMS 강사 조회용 -->
+	<select id="selectCmsMembers" resultMap="MemberMap">
+		SELECT member_id, member_name, admin_type
+		FROM member_tbl
+		WHERE 1=1
+		<if test="adminType != null and adminType != ''">
+			AND admin_type = #{adminType}
+		</if>
+		<if test="name != null and name != ''">
+			AND member_name LIKE '%' || #{name} || '%'
+		</if>
+		ORDER BY member_id DESC
+	</select>
+	
 </mapper>

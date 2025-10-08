@@ -8,6 +8,7 @@
     <id     column="facility_id"         property="facilityId"/>
     <result column="facility_name"       property="facilityName"/>
     <result column="member_id"           property="memberId"/>
+    <result column="instructor_id"       property="instructorId"/>  <!-- ⚠️ [251008] 담당자ID 컬럼 추가 -->
     <result column="facility_phone"      property="facilityPhone"/>
     <result column="facility_content"    property="facilityContent"/>
     <result column="facility_image_path" property="facilityImagePath"/>
@@ -28,6 +29,7 @@
       f.facility_id,
       f.facility_name,
       f.member_id,
+      f.instructor_id,
       f.facility_phone,
       f.facility_content,
       f.facility_image_path,
@@ -108,6 +110,24 @@
         AND f.facility_type = #{type} 
       </if>
     </where>
+  </select>
+  
+  <!-- [251008] CMS시설 등록, 담당강사 조회(admin_type 필터 포함) -->
+  <resultMap id="MemberMap" type="com.gym.domain.member.Member">
+    <id     column="member_id"    property="memberId"/>
+    <result column="member_name"  property="memberName"/>
+    <result column="member_email" property="memberEmail"/>
+    <result column="admin_type"   property="adminType"/>
+  </resultMap>
+  <select id="selectCmsMembers" resultMap="MemberMap">
+	SELECT member_id, member_name, member_email, admin_type
+	FROM member_tbl
+	WHERE member_role = 'admin'         <!-- 관리자 권한 -->
+	AND admin_type = '강사'             <!-- 강사만 조회 -->
+	<if test="name != null and name != ''">
+		AND member_name LIKE '%' || #{name} || '%'
+	</if>
+	ORDER BY member_id DESC
   </select>
 
 </mapper>
