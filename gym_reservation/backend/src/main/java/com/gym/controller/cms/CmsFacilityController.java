@@ -7,6 +7,7 @@ import com.gym.common.PageResponse;
 import com.gym.domain.facility.FacilityCreateRequest;
 import com.gym.domain.facility.FacilityResponse;
 import com.gym.domain.facility.FacilityUpdateRequest;
+import com.gym.domain.member.Member; // [251008] CMS시설 담당강사 조회(admin_type 필터 포함)
 // [서비스]
 import com.gym.service.FacilityService;
 // [스프링]
@@ -17,6 +18,10 @@ import org.springframework.security.core.Authentication;
 // [유틸]
 import java.util.LinkedHashMap;
 import java.util.Map;
+// [맵퍼]
+import com.gym.mapper.xml.MemberQueryMapper; // [251008] 강사 조회용 매퍼
+// [조회]
+import java.util.List; // [251008] 강사 조회용 
 // [문서/로그]
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,6 +38,7 @@ import lombok.extern.slf4j.Slf4j;
  * - 검증 메시지: “필수 입력사항은 입력해주세요.”, “최소 인원수가 최대 인원수보다 많습니다.”, 시간 선택 오류 등
  * - 금액은 숫자만(프론트 number), 백엔드도 음수 방지
  */
+@CrossOrigin("*")
 @Tag(name = "02. Facility-CMS", description = "CMS 시설 API (등록/수정 + 공통 조회)")
 @RestController
 @RequestMapping("/api/cms/facilities")
@@ -41,6 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 public class CmsFacilityController {
 
     private final FacilityService facilityService; // 서비스 빈 주입
+    private final MemberQueryMapper memberQueryMapper; // [251008] 강사 목록 조회용 매퍼
 
     /**
      * 1) 등록(POST /api/cms/facilities) — 폼 입력 → PK(Long)
@@ -49,9 +56,10 @@ public class CmsFacilityController {
      * - 시간: openHour/closeHour(셀렉트, 정수 문자열) → 서버에서 "HH:mm"
      * - 금액: 숫자만 허용(음수 금지)
      */
+    @CrossOrigin("*")
     @Operation(
         summary = "시설 등록(폼/CMS)",
-        description = "시설명은 필수, 담당자ID는 로그인ID로 자동 설정됩니다. 시간은 openHour/closeHour(셀렉트)로 받고 서버에서 HH:mm으로 조합."
+        description = "시설명은 필수, 작성자ID는 로그인ID로 자동 설정. 시간은 openHour/closeHour(셀렉트)로 받고 서버에서 HH:mm으로 조합."
     )
     @PostMapping(consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ApiResponse<Long> createFacilityForm(
@@ -93,7 +101,9 @@ public class CmsFacilityController {
             @Parameter(description = "1시간 이용료(원, 숫자만)", schema = @Schema(example = "50000"))
             @RequestParam(name = "facilityMoney", required = false) Long facilityMoney,
 
-
+            // [251008] 담당자 ID 추가
+            @Parameter(description = "시설 담당자(강사ID)")
+            @RequestParam(name = "instructorId", required = false) String instructorId,
 
             // ✅ 로그인 사용자 정보
             Authentication auth
@@ -103,7 +113,7 @@ public class CmsFacilityController {
             throw new IllegalArgumentException("필수 입력사항은 입력해주세요.");
         }
 
-        // ✅ 로그인 사용자ID를 담당자ID로 사용
+        // ✅ 로그인 사용자ID를 작성자ID로 사용
         final String loginId = auth.getName();
 
         // [인원 검증] 둘 다 있을 때만 비교(부분 입력 허용)
@@ -129,7 +139,8 @@ public class CmsFacilityController {
         // 폼 → DTO 매핑
         FacilityCreateRequest req = new FacilityCreateRequest();
         req.setFacilityName(facilityName.trim());
-        req.setMemberId(loginId); // ✅ 담당자ID = 로그인ID
+        req.setMemberId(loginId); // ✅ 작성자ID = 로그인ID
+        req.setInstructorId(instructorId); // [251008] 담당자(강사)
         req.setFacilityPhone(trimOrNull(facilityPhone));
         req.setFacilityContent(trimOrNull(facilityContent));
         req.setFacilityImagePath(trimOrEmpty(facilityImagePath)); // ✅ 변경: NULL 대신 ""로 전달
@@ -145,7 +156,7 @@ public class CmsFacilityController {
         return ApiResponse.ok(facilityService.createFacility(req));
     }
 
-    
+    @CrossOrigin("*")
     @Operation(summary = "시설 수정(폼/CMS)", description = "빈값은 미변경. 시간은 openHour/closeHour가 둘 다 있을 때만 HH:mm으로 갱신.")
     @PutMapping(value = "/{facilityId}", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ApiResponse<Void> updateFacilityForm(
@@ -186,7 +197,12 @@ public class CmsFacilityController {
             @RequestParam(name = "closeHour", required = false) String closeHour,
 
             @Parameter(description = "1시간 이용료(원, 숫자만)", schema = @Schema(example = "50000"))
-            @RequestParam(name = "facilityMoney", required = false) Long facilityMoney
+            @RequestParam(name = "facilityMoney", required = false) Long facilityMoney,
+                        
+            // [251008] 담당자 ID 추가
+            @Parameter(description = "시설 담당자(강사ID)")
+            @RequestParam(name = "instructorId", required = false) String instructorId
+
     ) {
         // [인원 비교] 둘 다 있을 때만 체크 (부분 입력 허용)
         if (facilityPersonMax != null && facilityPersonMin != null && facilityPersonMin > facilityPersonMax) {
@@ -222,17 +238,19 @@ public class CmsFacilityController {
         req.setFacilityCloseTime(facilityCloseTime);
         req.setFacilityMoney(facilityMoney);
         req.setFacilityType(trimOrNull(facilityType));
+        req.setInstructorId(trimOrNull(instructorId)); // ✅ [251008] 담당자ID 수정 가능하게 반영
 
         log.info("[CMS][PUT]/api/cms/facilities/{} form={}", facilityId, req);
         facilityService.updateFacility(facilityId, req);
         return ApiResponse.ok();
     }
     
-
+    @CrossOrigin("*")
     @Operation(summary = "시설 목록(폼/CMS)", description = "시설명/사용여부 조건으로 조회(미입력 시 전체) + 간단 페이징. 응답키는 items/total/page/size")
     @GetMapping
     public ApiResponse<Map<String, Object>> listForCms(
             @Parameter(description = "시설명(부분일치)") @RequestParam(name = "name", required = false) String name,
+            @Parameter(description = "카테고리(수영장/농구장/풋살장/배드민턴장/볼링장)") @RequestParam(name = "type", required = false) String type,// [251008 추가] 카테고리 셀렉트 박스 추가
             @Parameter(description = "사용여부(true=Y,false=N). 미입력 시 전체") @RequestParam(name = "facilityUse", required = false) Boolean facilityUse,
             @Parameter(description = "페이지(0부터)") @RequestParam(name = "page", defaultValue = "0") int page,
             @Parameter(description = "페이지 크기") @RequestParam(name = "size", defaultValue = "10") int size
@@ -240,21 +258,24 @@ public class CmsFacilityController {
         if (page < 0) page = 0;
         if (size <= 0) size = 10;
 
-        PageResponse<FacilityResponse> pr = facilityService.searchFacilities(name, facilityUse, page, size, null, null); // 카테고리항목(일단, 안쓰니까 null로 설정)추가
-
+        //PageResponse<FacilityResponse> pr = facilityService.searchFacilities(name, facilityUse, page, size, null, null); // 카테고리항목(일단, 안쓰니까 null로 설정)추가
+        PageResponse<FacilityResponse> pr = facilityService.searchFacilities(name, facilityUse, page, size, null, type); // [251008] 카테고리항목 null → type으로 변경
+        
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("items", pr.getItems());
         payload.put("total", pr.getTotal());
         payload.put("page", pr.getPage());
         payload.put("size", pr.getSize());
 
-        log.info("[CMS][GET]/api/cms/facilities?name={}&use={}&page={}&size={}", name, facilityUse, page, size);
+        // log.info("[CMS][GET]/api/cms/facilities?name={}&use={}&page={}&size={}", name, facilityUse, page, size);
+        log.info("[CMS][GET]/api/cms/facilities?name={}&type={}&use={}&page={}&size={}", name, type, facilityUse, page, size); // [251008] 카테고리항목(type) 전달
         return ApiResponse.ok(payload);
     }
 
     
     
     /** 4) 단건(GET /api/cms/facilities/{id}) — PK로 FacilityResponse */
+    @CrossOrigin("*")
     @Operation(summary = "시설 단건 조회(CMS)", description = "PK 기준 단건 조회 (공통)")
     @GetMapping("/{facilityId}")
     public ApiResponse<FacilityResponse> getFacilityByIdCms(
@@ -263,26 +284,45 @@ public class CmsFacilityController {
         log.info("[CMS][GET]/api/cms/facilities/{}", facilityId);
         return ApiResponse.ok(facilityService.getFacilityById(facilityId));
     }
+	    // 내부 유틸: 빈문자 처리/시 검증 
+	    private static boolean isBlank(String s) {
+	        return s == null || s.trim().isEmpty();
+	    }
+	    private static String trimOrNull(String s) {
+	        if (s == null) return null;
+	        String t = s.trim();
+	        return t.isEmpty() ? null : t;
+	    }
+	    private static int parseHour(String hour, String label) {
+	        try {
+	            int h = Integer.parseInt(hour); // "08" → 8, "22" → 22
+	            if (h < 0 || h > 23) throw new NumberFormatException();
+	            return h;
+	        } catch (NumberFormatException e) {
+	            throw new IllegalArgumentException(label + " 시간은 0~23 사이 정수만 허용됩니다.");
+	        }
+	    }
+	    private static String trimOrEmpty(String s) {  // ✅ 추가: NULL → "" 변환(Oracle setNull(… ,1111) 회피)
+	        return (s == null) ? "" : s.trim();
+	}
+	    
+	// [251008] CMS시설 담당강사 조회(admin_type기준)
+	@CrossOrigin("*")
+    @Operation(summary = "CMS 회원 조회 (admin_type 필터 포함)")
+    @GetMapping("/admins")
+	public ApiResponse<Map<String, Object>> getCmsMembers(
+		    @RequestParam(name = "adminType", required = false) String adminType,
+		    @RequestParam(name = "name", required = false) String name
+		) {
+		    // admin_type은 '강사'로 고정 조회
+		    List<Member> list = memberQueryMapper.selectCmsMembers("강사", name);
 
-    // 내부 유틸: 빈문자 처리/시 검증 
-    private static boolean isBlank(String s) {
-        return s == null || s.trim().isEmpty();
-    }
-    private static String trimOrNull(String s) {
-        if (s == null) return null;
-        String t = s.trim();
-        return t.isEmpty() ? null : t;
-    }
-    private static int parseHour(String hour, String label) {
-        try {
-            int h = Integer.parseInt(hour); // "08" → 8, "22" → 22
-            if (h < 0 || h > 23) throw new NumberFormatException();
-            return h;
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException(label + " 시간은 0~23 사이 정수만 허용됩니다.");
-        }
-    }
-    private static String trimOrEmpty(String s) {  // ✅ 추가: NULL → "" 변환(Oracle setNull(… ,1111) 회피)
-        return (s == null) ? "" : s.trim();
-    }
+		    Map<String, Object> payload = new LinkedHashMap<>();
+		    payload.put("items", list);
+		    payload.put("total", list.size());
+
+		    log.info("[CMS][GET]/api/cms/facilities/admins?name={}", name);
+		    return ApiResponse.ok(payload);
+	}
+
 }

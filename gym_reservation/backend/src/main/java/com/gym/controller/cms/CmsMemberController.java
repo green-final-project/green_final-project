@@ -23,6 +23,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -31,12 +32,15 @@ import java.util.List;
  * [250927 신규] CMS 책임자 전용 컨트롤러 - 책임자(admin_type='책임자')만 접근 가능 - 등록/수정/삭제/목록/단건조회
  * 제공
  */
+@CrossOrigin("*")
 @Tag(name = "01.Member-CMS", description = "CMS 회원 관리 API (등록/수정/삭제/목록/단건조회)")
 @RestController
 @RequestMapping("/api/cms/members")
+//@RequestMapping({"/sign-api", "/api/cms/sign-api"}) // ✅ 두 경로 모두 허용
 @RequiredArgsConstructor
 @Slf4j
-@PreAuthorize("hasAuthority('책임자')") // [접근제어] 책임자만 접근 가능
+//@PreAuthorize("hasAuthority('책임자')") // [접근제어] 책임자만 접근 가능
+@PreAuthorize("hasAnyAuthority('ROLE_ADMIN','책임자')")
 public class CmsMemberController {
 
 	private final MemberService memberService;
@@ -51,6 +55,7 @@ public class CmsMemberController {
 	// 회원 등록 (CMS)
 	// ============================================================
 	// --- (memberRole: 기본 user, adminType: 선택) ---
+	@CrossOrigin("*")
     @Operation(summary = "회원 등록(CMS)", description = "관리자 권한으로 회원 등록 (폼 입력, application/x-www-form-urlencoded)")
     @PostMapping(consumes = "application/x-www-form-urlencoded")
     public ApiResponse<Integer> createMemberCms(
@@ -152,13 +157,16 @@ public class CmsMemberController {
         
     }
 
+	
 
 
 	// ============================================================
 	// 회원 단건 조회 (CMS)
 	// ============================================================
+	@CrossOrigin("*")
 	@Operation(summary = "회원 단건 조회(CMS)", description = "회원ID를 PathVariable로 입력하면 해당 회원의 정보를 단건 조회한다.")
 	@GetMapping("/{memberId}")
+	
 	public ApiResponse<Member> getMemberByIdCms(
 			@Parameter(description = "회원ID") @PathVariable("memberId") String memberId) {
 		log.info("[CMS][GET]/api/cms/members/{}", memberId); // 로그 출력
@@ -172,6 +180,7 @@ public class CmsMemberController {
 	// ============================================================
 	// 회원 목록 조회 (CMS)
 	// ============================================================
+	@CrossOrigin("*")
 	@Operation(summary = "회원 목록 조회(CMS)", description = "페이지/사이즈 입력폼. 둘 다 빈값이면 전체조회")
 	@GetMapping
 	public ApiResponse<List<Member>> listMembersCms(
@@ -186,16 +195,23 @@ public class CmsMemberController {
 	// ============================================================
 	// 회원 수정 (CMS) — user와 차이: 역할/등급도 수정 가능
 	// ============================================================
+	@CrossOrigin("*")
 	@Operation(summary = "회원 수정(CMS)", description = "책임자가 회원 정보를 수정. 입력폼(application/x-www-form-urlencoded). "
 			+ "user와 달리 memberRole, adminType도 수정 가능")
 	@PutMapping(value = "/{memberId}", consumes = "application/x-www-form-urlencoded")
 	public ApiResponse<Integer> updateMemberCms(
 			@Parameter(description = "수정할 회원ID") @PathVariable("memberId") String memberId, // ✅ PathVariable 명시
 			@Parameter(description = "새 비밀번호(선택)") @RequestParam(value = "newPw", required = false) String newPw,
+			@Parameter(description = "회원이름(필수)") @RequestParam("memberName") String memberName, // [251007] 파리미터 추가
+            @Parameter(description = "성별(필수)", schema = @io.swagger.v3.oas.annotations.media.Schema(allowableValues = {"m", "f"}))
+            @RequestParam("memberGender") String memberGender, // [251007] 파리미터 추가
+			@Parameter(description = "생년월일") @RequestParam(value = "memberBirthday", required = false) String memberBirthday, // [251007] 파리미터 추가 
 			@Parameter(description = "이메일(선택)") @RequestParam(value = "memberEmail", required = false) String memberEmail,
 			@Parameter(description = "휴대폰(선택)") @RequestParam(value = "memberMobile", required = false) String memberMobile,
 			@Parameter(description = "전화번호(선택)") @RequestParam(value = "memberPhone", required = false) String memberPhone,
+			@Parameter(description = "우편번호(선택)") @RequestParam(value = "zip", required = false) String zip, // [251007] 파리미터 추가
 			@Parameter(description = "도로명주소(선택)") @RequestParam(value = "roadAddress", required = false) String roadAddress,
+			@Parameter(description = "지번주소(선택)") @RequestParam(value = "jibunAddress", required = false) String jibunAddress, // [251007] 파리미터 추가
 			@Parameter(description = "상세주소(선택)") @RequestParam(value = "detailAddress", required = false) String detailAddress,
 			 // select 형태(허용값 명시)
 	        @Parameter(
@@ -272,5 +288,17 @@ public class CmsMemberController {
 			return false;
 		String t = v.trim();
 		return !t.isEmpty() && !"string".equalsIgnoreCase(t);
+	}
+	
+	// ------------------------------------------------------------
+	// [251007] 회원중복 확인
+	// ------------------------------------------------------------
+	@CrossOrigin("*")
+	@Operation(summary = "회원 ID 중복 확인", description = "회원ID 존재 여부 확인 (exists: true/false 반환)")
+	@GetMapping("/check-id")
+	public ApiResponse<?> checkId(@RequestParam("memberId") String memberId) {
+	    log.info("[CMS][GET]/api/cms/members/check-id?memberId={}", memberId);
+	    boolean exists = memberService.existsById(memberId);
+	    return ApiResponse.ok(Map.of("exists", exists));
 	}
 }

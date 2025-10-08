@@ -40,6 +40,7 @@ import java.util.List;                                      // ✅ 목록 반환
  *  - 검색 DTO 필드(resvId/memberId/facilityId/memberName/resvCancel 등)  :contentReference[oaicite:3]{index=3}
  *  - 사용자 컨트롤러가 폼 전송을 사용하는 패턴(입력폼 기반)  :contentReference[oaicite:4]{index=4}
  */
+@CrossOrigin("*")
 @Tag(name = "09.Reservation-CMS", description = "CMS용 예약 관리")
 @RestController                                                // ✅ REST 방식(JSON 응답)
 @RequestMapping("/cms/reservations")                           // ✅ CMS 전용 베이스 URL
@@ -57,6 +58,7 @@ public class CmsReservationController {
     //             (회원명/취소여부 파라미터도 DTO에 실어 전달함)
     //             조회 컬럼에 memberName/resvCancel이 포함됨을 확인  :contentReference[oaicite:6]{index=6}
     // ---------------------------------------------------------------------
+    @CrossOrigin("*")
     @Operation(summary = "신청정보 목록(폼)", description = "예약ID/시설ID/회원ID/회원명/취소여부 조건으로 조회(미입력 시 전체) + 간단 페이징")
     @GetMapping
     public ApiResponse<Map<String, Object>> listForCms(
@@ -112,6 +114,7 @@ public class CmsReservationController {
     //             (CMS에서 소유자 검증을 통과시키려면 '해당 예약의 memberId'를 폼에서 받아 전달)
     //             서비스 시그니처 참고  :contentReference[oaicite:8]{index=8}
     // ---------------------------------------------------------------------
+    @CrossOrigin("*")
     @Operation(summary = "신청정보 상태 변경(폼)", description = "완료/취소/대기 중 하나로 상태 변경(폼 전송).")
     @PostMapping(value = "/{resvId}/status", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ApiResponse<String> changeStatus(

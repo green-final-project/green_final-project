@@ -90,12 +90,12 @@ public class SignController {
         } catch (Exception ignore) {}
     
         // CMS 경로 요청일 때만 관리자 필터 실행
-        if (requestPath.startsWith("/cms") && ("user".equalsIgnoreCase(member.getMemberRole()))) {
-            return ResponseEntity.status(403).body(Map.of( // 403에러 발생(권한이 없을 경우)
-            		"code","403",
-            		"message","관리자 전용 계정만 로그인 가능합니다."
+        if (requestPath.startsWith("/cms") && ("user".equalsIgnoreCase(member.getMemberRole()))) 
+            return ResponseEntity.status(403).body(Map.of(
+                "code","403",
+                "message","관리자 전용 계정만 로그인 가능합니다."
             ));
-        }
+
         // ------------------------------------------------------------------------------------------------------------------------------
         
         // [3-6] 응답 반환 : 토큰 + 전체 회원 정보
