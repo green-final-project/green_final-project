@@ -90,7 +90,7 @@ public class MemberServiceImpl implements MemberService {
         }
     }
 
-    // ✏️ 수정 (memberId, memberName 정책상 수정 금지)
+    // ✏️ 수정 기능
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int updateMember(String memberId, Member member) {
@@ -112,6 +112,24 @@ public class MemberServiceImpl implements MemberService {
         if (member.getMemberRole() != null)      target.setMemberRole(member.getMemberRole());
         if (member.getAdminType() != null)       target.setAdminType(member.getAdminType());
 
+        
+        // ⚠️ [1] 빈 문자열 → null 보정은 target 기준으로
+        if (member.getMemberPhone() != null && member.getMemberPhone().trim().isEmpty()) target.setMemberPhone(null);
+        else if (member.getMemberPhone() != null) target.setMemberPhone(member.getMemberPhone());
+
+        if (member.getZip() != null && member.getZip().trim().isEmpty()) target.setZip(null);
+        else if (member.getZip() != null) target.setZip(member.getZip());
+
+        if (member.getRoadAddress() != null && member.getRoadAddress().trim().isEmpty()) target.setRoadAddress(null);
+        else if (member.getRoadAddress() != null) target.setRoadAddress(member.getRoadAddress());
+
+        if (member.getJibunAddress() != null && member.getJibunAddress().trim().isEmpty()) target.setJibunAddress(null);
+        else if (member.getJibunAddress() != null) target.setJibunAddress(member.getJibunAddress());
+
+        if (member.getDetailAddress() != null && member.getDetailAddress().trim().isEmpty()) target.setDetailAddress(null);
+        else if (member.getDetailAddress() != null) target.setDetailAddress(member.getDetailAddress());
+        
+        
         target.setMemberId(memberId);
 
         int affected = memberMapper.update(target);
@@ -141,5 +159,18 @@ public class MemberServiceImpl implements MemberService {
     public long countMembers(String keyword, String role) {
         return memberQueryMapper.countMembers(keyword, role); // MemberQueryMapper랑 연동되어 있음
     }
+    
+    // [251007] 회원ID 존재 여부 확인 구현부
+    @Override
+    public boolean existsById(String memberId) {
+        log.info("[existsById] 중복확인 요청 memberId={}", memberId);
+
+        Member member = memberMapper.selectMemberById(memberId);
+        boolean exists = (member != null);
+
+        log.info("[existsById] 결과: {}", exists ? "존재함" : "사용 가능");
+        return exists;
+    }
+
 }
 

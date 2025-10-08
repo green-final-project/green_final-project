@@ -46,7 +46,8 @@ public class FacilityServiceImpl implements FacilityService {
         // [4] VO 생성: 요청값 → 엔티티 필드 매핑(+ 기본값 적용)
         Facility f = Facility.builder()
                 .facilityName(req.getFacilityName())                 // 시설명(필수)
-                .memberId(req.getMemberId())                         // 담당자ID(허용 스펙에 따라 필수/선택)
+                .memberId(req.getMemberId())                         // 작성자ID(허용 스펙에 따라 필수/선택)
+                .instructorId(req.getInstructorId())   				 // [251008] 담당자(강사)
                 .facilityPhone(req.getFacilityPhone())               // 연락처
                 .facilityContent(req.getFacilityContent())           // 시설 설명
                 .facilityImagePath(req.getFacilityImagePath())       // 이미지 경로
@@ -117,6 +118,7 @@ public class FacilityServiceImpl implements FacilityService {
         // 입력된 값만 업데이트 (null은 무시)
         if (req.getFacilityName() != null)       target.setFacilityName(req.getFacilityName());
         if (req.getMemberId() != null)           target.setMemberId(req.getMemberId());
+        if (req.getInstructorId() != null)       target.setInstructorId(req.getInstructorId());
         if (req.getFacilityPhone() != null)      target.setFacilityPhone(req.getFacilityPhone());
         if (req.getFacilityContent() != null)    target.setFacilityContent(req.getFacilityContent());
         if (req.getFacilityImagePath() != null)  target.setFacilityImagePath(req.getFacilityImagePath());
@@ -172,6 +174,7 @@ public class FacilityServiceImpl implements FacilityService {
                 .facilityId(f.getFacilityId())
                 .facilityName(f.getFacilityName())
                 .memberId(f.getMemberId())
+                .instructorId(f.getInstructorId()) // [251008 추가] 시설담당자 매핑
                 .facilityPhone(f.getFacilityPhone())
                 .facilityContent(f.getFacilityContent())
                 .facilityImagePath(f.getFacilityImagePath())
@@ -183,6 +186,7 @@ public class FacilityServiceImpl implements FacilityService {
                 .facilityOpenTime(f.getFacilityOpenTime())
                 .facilityCloseTime(f.getFacilityCloseTime())
                 .facilityMoney(f.getFacilityMoney())
+                .facilityType(f.getFacilityType()) // ✅ [251007 추가] 시설유형 매핑
                 .build();
     }
 }

@@ -21,5 +21,8 @@ public interface MemberService {
     List<Member> listMembers(Integer page, Integer size, String keyword, String role); // 📃 목록
 
     long countMembers(String keyword, String role); // 🔢 총 개수
+    
+    // [251007] 회원ID 존재 여부 확인용 (중복검사용)
+    boolean existsById(String memberId);
 }
 
