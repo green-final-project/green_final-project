@@ -13,6 +13,7 @@ public interface FacilityMapper {
           f.facility_id         AS facilityId,
           f.facility_name       AS facilityName,
           f.member_id           AS memberId,
+          f.instructor_id       AS instructorId,
           f.facility_phone      AS facilityPhone,
           f.facility_content    AS facilityContent,
           f.facility_image_path AS facilityImagePath,
@@ -36,6 +37,7 @@ public interface FacilityMapper {
     		    facility_id,
     		    facility_name,
     		    member_id,
+    		    instructor_id,
     		    facility_phone,
     		    facility_content,
     		    facility_image_path,
@@ -50,6 +52,7 @@ public interface FacilityMapper {
     		    facility_seq.NEXTVAL,
     		    #{facilityName, jdbcType=VARCHAR},
     		    #{memberId, jdbcType=VARCHAR},
+    		    #{instructorId, jdbcType=VARCHAR},
     		    #{facilityPhone, jdbcType=VARCHAR},
     		    #{facilityContent, jdbcType=VARCHAR},
     		    #{facilityImagePath, jdbcType=VARCHAR},
@@ -79,7 +82,11 @@ public interface FacilityMapper {
                <if test="memberId != null and memberId != ''">
                  member_id = #{memberId, jdbcType=VARCHAR},
                </if>
-
+               
+               <if test="instructorId != null and instructorId != ''">
+                 instructor_id = #{instructorId, jdbcType=VARCHAR},
+               </if>
+               
                <if test="facilityPhone != null and facilityPhone != ''">
                  facility_phone = #{facilityPhone, jdbcType=VARCHAR},
                </if>

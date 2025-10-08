@@ -24,5 +24,11 @@ public interface MemberQueryMapper {
         @Param("keyword") String keyword,
         @Param("role") String role
     );
+    
+    // [251008 추가] CMS 강사 전용 목록(admin_type 필터)
+    List<Member> selectCmsMembers(
+        @Param("adminType") String adminType,
+        @Param("name") String name
+    );
 }
 
